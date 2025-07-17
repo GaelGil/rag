@@ -1,4 +1,5 @@
 import os
+import json
 from LLM.OpenAi import OpenAi
 from dotenv import load_dotenv
 from pathlib import Path
@@ -15,19 +16,51 @@ async def execute():
     tools = await client.get_tools()
     llm = OpenAi(model_name="gpt_4.1-mini", api_key=os.getenv("OPENAI_API_KEY"))
 
-    response = llm.parse_response(
-        messages=[
+    while True:
+        query = input("\nYour question (or type 'exit'): ").strip()
+        if query.lower() in ("exit", "quit"):
+            await client.aclose()
+            print("Session done")
+            break
+
+        messages = [
             {
                 "role": "developer",
-                "content": "",
+                "content": "You are a helpful AI assistant tasked with answering anything the user asks. If you need to call a function include that in the text response so the user knows",
             },
             {
                 "role": "user",
-                "content": "Write a thoughtful essay about the cultural impact of star wars. The essay should be at least 500 words long and include references to the original trilogy, the prequels, and the sequels. Include the sources",
+                "content": query,
             },
-        ],
-        tools=tools,
-        response_format=Answer,
-    )
+        ]
 
-    print(response.output_parsed)
+        response = llm.create_response(
+            messages=messages,
+            tools=tools,
+        )
+
+        if response.output[0].type != "function_call":
+            continue
+        for tool_call in response.output:
+            name = tool_call.name
+            # get the arguments for the tool
+            args = json.loads(tool_call.arguments)
+            # add the output to the messages (tool_call = item in response.output)
+            messages.append(tool_call)
+            # call the function
+            result = client.call_tool(name, args)
+            print(response)
+            # add the tool result to the messages
+            messages.append(
+                {
+                    "type": "function_call_output",
+                    "call_id": tool_call.call_id,
+                    "output": str(result),
+                }
+            )
+
+        follow_up_response = llm.parse_response(
+            messages=messages, tools=tools, response_format=Answer
+        )
+
+    print(follow_up_response.output_parsed)

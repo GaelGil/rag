@@ -2,12 +2,11 @@ import json
 import requests
 from mcp.server.fastmcp import FastMCP
 import wikipedia
-import datetime
 
 
 # Create an MCP server
 mcp = FastMCP(
-    name="Knowledge Base",
+    name="Tool Server",
     host="0.0.0.0",  # only used for SSE transport (localhost)
     port=8050,  # only used for SSE transport (set this to any port)
 )
