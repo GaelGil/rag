@@ -1,5 +1,6 @@
 import os
 import json
+import asyncio
 from LLM.OpenAi import OpenAi
 from dotenv import load_dotenv
 from pathlib import Path
@@ -12,8 +13,9 @@ load_dotenv(Path("./.env"))
 
 async def execute():
     client = MCPClient(base_url="http://localhost:8050/sse")
-    await client.call_tool()
+    await client.connect()
     tools = await client.get_tools()
+    print(f"TOOLS: {tools}")
     llm = OpenAi(model_name="gpt_4.1-mini", api_key=os.getenv("OPENAI_API_KEY"))
 
     while True:
@@ -38,7 +40,7 @@ async def execute():
             messages=messages,
             tools=tools,
         )
-
+        # response
         if response.output[0].type != "function_call":
             continue
         for tool_call in response.output:
@@ -48,7 +50,7 @@ async def execute():
             # add the output to the messages (tool_call = item in response.output)
             messages.append(tool_call)
             # call the function
-            result = client.call_tool(name, args)
+            result = await client.call_tool(tool_name=name, arguments=args)
             print(response)
             # add the tool result to the messages
             messages.append(
@@ -64,3 +66,7 @@ async def execute():
         )
 
     print(follow_up_response.output_parsed)
+
+
+if __name__ == "__main__":
+    asyncio.run(execute())

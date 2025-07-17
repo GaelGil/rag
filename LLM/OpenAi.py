@@ -14,9 +14,7 @@ class OpenAi:
         self.model_name = model_name
         self.client = OpenAI(api_key=api_key)
 
-    def create_response(
-        self, messages: list, tools: list = None, response_format=None
-    ) -> OpenAI.responses:
+    def create_response(self, messages: list, tools: list = None) -> OpenAI.responses:
         """
         Create a response from the model based on the input messages and optional tools.
         """
@@ -25,7 +23,6 @@ class OpenAi:
             input=messages,
             tools=tools,
             tool_choice="auto",
-            text_format=response_format,
         )
 
     def parse_response(
