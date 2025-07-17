@@ -18,6 +18,10 @@ class OpenAi:
         """
         Create a response from the model based on the input messages and optional tools.
         """
+        print(
+            f"TYPE: {type(self.client.responses.create(model=self.model_name, input=messages))}"
+        )
+
         return self.client.responses.create(
             model=self.model_name,
             input=messages,

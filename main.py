@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from pathlib import Path
 from schemas import Answer
 from mcp_server_client.client import MCPClient
-
+import aioconsole  # Import aioconsole
 
 load_dotenv(Path("./.env"))
 
@@ -16,10 +16,11 @@ async def execute():
     await client.connect()
     tools = await client.get_tools()
     print(f"TOOLS: {tools}")
-    llm = OpenAi(model_name="gpt_4.1-mini", api_key=os.getenv("OPENAI_API_KEY"))
+    llm = OpenAi(model_name="gpt-4.1-mini", api_key=os.getenv("OPENAI_API_KEY"))
 
     while True:
-        query = input("\nYour question (or type 'exit'): ").strip()
+        query = await aioconsole.ainput("\nYour question (or type 'exit'): ")
+        query = query.strip()
         if query.lower() in ("exit", "quit"):
             await client.aclose()
             print("Session done")

@@ -3,3 +3,4 @@ fastmcp
 nest_asyncio
 requests
 wikipedia
+aioconsole
