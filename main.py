@@ -5,7 +5,7 @@ from LLM.OpenAi import OpenAi
 from dotenv import load_dotenv
 from pathlib import Path
 from schemas import Answer
-from mcp_server_client.client import MCPClient
+from MCP.client import MCPClient
 import aioconsole  # Import aioconsole
 
 load_dotenv(Path("./.env"))
