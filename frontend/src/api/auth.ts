@@ -11,7 +11,7 @@ export const getCurrentUser = async () => {
 };
 
 export const login = async (username: string, password: string) => {
-  const res = await fetch(`${BASE_URL}/login`, {
+  const res = await fetch(`${BASE_URL}/users/login`, {
     method: "POST",
     credentials: "include",
     headers: {
@@ -34,7 +34,7 @@ export const signup = async (
   email: string,
   password: string
 ) => {
-  const res = await fetch(`${BASE_URL}/signup`, {
+  const res = await fetch(`${BASE_URL}/users/signup`, {
     method: "POST",
     credentials: "include",
     headers: {
@@ -50,7 +50,7 @@ export const signup = async (
 };
 
 export const logout = async () => {
-  const res = await fetch(`${BASE_URL}/logout`, {
+  const res = await fetch(`${BASE_URL}/users/logout`, {
     method: "POST",
     credentials: "include",
   });

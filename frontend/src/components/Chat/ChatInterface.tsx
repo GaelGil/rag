@@ -43,7 +43,7 @@ const ChatInterface = () => {
     scrollToBottom();
   }, [messages]);
 
-  const sendMessage = async (content: string) => {
+  const sendMessage = (content: string) => {
     if (!content.trim() || isLoading) return;
 
     const userMessage: Message = {
@@ -53,37 +53,46 @@ const ChatInterface = () => {
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const loadingMessage: Message = {
+      id: (Date.now() + 1).toString(),
+      role: "assistant",
+      content: "",
+      timestamp: new Date(),
+      isLoading: true,
+    };
+
+    setMessages((prev) => [...prev, userMessage, loadingMessage]);
     setIsLoading(true);
 
-    try {
-      const res = await fetch(`${BASE_URL}/api/chat/message`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: content }),
-      });
-      const data = await res.json();
+    // Use GET for SSE — message sent as query param
+    const eventSource = new EventSource(
+      `${BASE_URL}/chat/message?message=${encodeURIComponent(content)}`,
+      { withCredentials: true }
+    );
 
-      if (data.success) {
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: "assistant",
-          content: "", // optionally parsed or plain text from data.response
-          response: data.response,
-          timestamp: new Date(),
+    let accumulatedMessage = "";
+
+    eventSource.onmessage = (event) => {
+      accumulatedMessage += event.data;
+      setMessages((prev) => {
+        const newMessages = [...prev];
+        newMessages[newMessages.length - 1] = {
+          ...newMessages[newMessages.length - 1],
+          content: accumulatedMessage,
         };
+        return newMessages;
+      });
+    };
 
-        setMessages((prev) => [...prev, assistantMessage]);
-      } else {
-        throw new Error(data.error || "Unknown error");
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      // optionally update UI with error message
-    } finally {
+    eventSource.onerror = (err) => {
+      console.error("SSE error:", err);
+      eventSource.close();
       setIsLoading(false);
-    }
+    };
+
+    eventSource.onopen = () => {
+      console.log("SSE connection opened");
+    };
   };
 
   return (

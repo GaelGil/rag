@@ -77,7 +77,7 @@ const Navigation = () => {
             <Link
               to="/login"
               className={`no-underline ${
-                location.pathname === "/login"
+                location.pathname === "/chat"
                   ? "text-blue-600"
                   : "text-gray-700 hover:text-blue-600"
               }`}
