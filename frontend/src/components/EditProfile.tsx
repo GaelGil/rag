@@ -6,7 +6,6 @@ import Spinner from "react-bootstrap/Spinner";
 import { useEffect, useState } from "react";
 import type { Profile } from "../types/UserProfileProps";
 import { getUserProfile } from "../api/users";
-import Followers from "./Lists/Followers";
 import { useUser } from "../context/UserContext"; // <-- added
 // import { useNavigate } from "react-router-dom";
 
@@ -27,7 +26,7 @@ const EditProfile = ({ userId }: { userId: string }) => {
       if (!token || !idToFetch) return;
 
       try {
-        const fetchedUser = await getUserProfile(idToFetch, token);
+        const fetchedUser = await getUserProfile(idToFetch);
         setProfile(fetchedUser);
       } catch (error) {
         console.error("Error fetching profile:", error);
@@ -68,10 +67,6 @@ const EditProfile = ({ userId }: { userId: string }) => {
                 )}
               </Card.Body>
             </Card>
-          </Col>
-
-          <Col xs={12} md={5}>
-            {profile?.id && <Followers userId={String(profile.id)} />}
           </Col>
         </Row>
       </Container>
