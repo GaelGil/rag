@@ -7,23 +7,32 @@ chat_service = ChatService()
 chat_service.init_chat_services()
 
 
+from flask import Response, stream_with_context, request
+import asyncio
+
+def generate_response(message):
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    async_gen = chat_service.process_message(message)
+
+    try:
+        while True:
+            chunk = loop.run_until_complete(async_gen.__anext__())
+            yield f"data: {chunk}\n\n"  # SSE format
+    except StopAsyncIteration:
+        pass
+    finally:
+        loop.close()
+
 @chat.route("/message", methods=["POST"])
 def send_message():
-    """Send a message to the AI agent and get a streaming response."""
-    try:
-        data = request.get_json()
-        message = data.get("message")
+    data = request.get_json()
+    message = data.get("message")
+    if not message:
+        return jsonify({"error": "Message required"}), 400
 
-        if not message:
-            return jsonify({"error": "Message is required"}), 400
+    return Response(stream_with_context(generate_response(message)), content_type="text/event-stream")
 
-        # Get response from agent
-        response_data = asyncio.run(chat_service.process_message(message))
-
-        return jsonify(response_data), 200
-
-    except Exception as e:
-        return jsonify({"error": f"Failed to process message: {str(e)}"}), 500
 
 
 @chat.route("/health", methods=["GET"])
