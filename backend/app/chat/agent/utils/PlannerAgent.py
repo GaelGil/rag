@@ -1,4 +1,4 @@
-from backend.app.chat.agent.utils.schemas import Plan
+from app.chat.agent.utils.schemas import Plan
 from openai import OpenAI
 from openai.types.responses import ParsedResponse
 

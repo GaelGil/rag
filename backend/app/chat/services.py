@@ -1,25 +1,57 @@
 from app.chat.agent.utils.OpenAIClient import OpenAIClient
 from app.chat.agent.utils.PlannerAgent import PlannerAgent
-from app.chat.agent.utils.Executor import Executor
+
+# from app.chat.agent.utils.Executor import Executor
 from app.chat.agent.MCP.client import MCPClient
-from app.chat.agent.utils.schemas import Plan
+
+# from app.chat.agent.utils.schemas import Plan
 from app.chat.agent.utils.prompts import CHATBOT_PROMPT
 from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
 from composio import Composio  # type: ignore
 import os
+import json
 
 load_dotenv(Path("../../.env"))
 
 
-class ChatServices:
+# Example tool function
+def get_weather(location: str) -> str:
+    # Here you would implement actual weather lookup logic
+    return f"The current temperature in {location} is 72°F."
+
+
+# Define your tools schema like your snippet
+tools = [
+    {
+        "type": "function",
+        "name": "get_weather",
+        "description": "Get current temperature for a given location.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "location": {
+                    "type": "string",
+                    "description": "City and country e.g. Bogotá, Colombia",
+                }
+            },
+            "required": ["location"],
+            "additionalProperties": False,
+        },
+        "strict": True,
+    },
+]
+
+
+class ChatService:
     def __init__(self):
         self.chat_history: list[dict]
         self.planner: PlannerAgent = None
         self.mcp_client: MCPClient = None
         self.llm: OpenAI = None
-        self.tools = None
+        self.tools = tools
+        self.tool_functions = {"get_weather": get_weather}
         self.model_name: str = "gpt-4.1-mini"
         self.composio = Composio()
         self.user_id = "0000-1111-2222"
@@ -51,44 +83,55 @@ class ChatServices:
         stream = self.llm.responses.create(
             model=self.model_name, input=self.chat_history, stream=True
         )
+
         assistant_text = ""
         tool_call = None
 
-        # Stream tokens
-        for event in stream:
+        # Stream tokens from initial response
+        async for event in stream:
             delta = event.choices[0].delta
+            tool_call = delta.get("tool_call")
 
-            # Detect if model wants to call a tool
-            if "tool_call" in delta:
-                tool_call = delta["tool_call"]
-                # Yield some text telling user you are calling the tool
-                msg = f"\n[Calling tool {tool_call['name']} with args {tool_call['arguments']}]...\n"
-                yield msg
-                break
+            if tool_call and isinstance(tool_call, dict):
+                tool_name = tool_call.get("name")
+                tool_args_str = tool_call.get("arguments")
 
-            # Otherwise yield normal text delta
-            content = delta.get("content", "")
-            assistant_text += content
-            yield content
+                if not tool_name or not tool_args_str:
+                    # Invalid tool_call, ignore and continue streaming text
+                    tool_call = None
+                else:
+                    # Yield user-friendly message about tool call
+                    msg = f"\n[Calling tool {tool_name} with args {tool_args_str}]...\n"
+                    yield msg
+                    break  # Exit streaming to handle the tool call
 
+            if not tool_call:
+                content = delta.get("content", "")
+                assistant_text += content
+                yield content
+
+        # Handle tool call if detected
         if tool_call:
-            tool_name = tool_call["name"]
-            tool_args_str = tool_call["arguments"]  # usually JSON string
-            import json
+            try:
+                tool_args = json.loads(tool_args_str)
+            except (json.JSONDecodeError, TypeError):
+                tool_args = {}
 
-            tool_args = json.loads(tool_args_str)
+            tool_function = self.tool_functions.get(tool_name)
+            if not tool_function:
+                tool_result = f"[Error] Tool '{tool_name}' not implemented."
+            else:
+                try:
+                    tool_result = tool_function(**tool_args)
+                except Exception as e:
+                    tool_result = f"[Error] Exception calling tool '{tool_name}': {e}"
 
-            # Call the actual tool function with parsed args
-            tool_result = self.tool_functions[tool_name](**tool_args)
+            # Add tool result to system messages in history
+            self.add_chat_history("system", f"Tool {tool_name} returned: {tool_result}")
 
-            # Append tool result as system message to history
-
-            self.add_chat_history(
-                role="system", message=f"Tool {tool_name} returned: {tool_result}"
-            )
-            # Now ask model again to generate final response incorporating tool result
-            stream2 = self.llm.responses.create(
-                model="gpt-4.1-mini",
+            # Resume conversation with tool info in history
+            stream2 = self.client.responses.create(
+                model="gpt-5",
                 input=self.chat_history,
                 tools=self.tools,
                 stream=True,
@@ -101,11 +144,12 @@ class ChatServices:
                 assistant_text += content
                 yield content
 
-            # Append assistant final reply
-            self.add_chat_history(role="assistant", message=assistant_text)
+            # Append final assistant response to history
+            self.add_chat_history("assistant", assistant_text)
+
         else:
-            # No tool call, append assistant text directly
-            self.add_chat_history(role="assistant", message=assistant_text)
+            # No tool call, append assistant text to history
+            self.add_chat_history("assistant", assistant_text)
 
     def extract_tools(self, tool_call):
         pass

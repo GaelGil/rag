@@ -1,4 +1,4 @@
-from backend.app.chat.agent.utils.schemas import Plan, PlannerTask, ToolCall
+from app.chat.agent.utils.schemas import Plan, PlannerTask, ToolCall
 from app.chat.agent.MCP.client import MCPClient
 
 

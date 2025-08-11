@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, stream_with_context, Response
 from app.chat.services import ChatService
 import asyncio
 
@@ -6,9 +6,6 @@ chat = Blueprint("chat", __name__)
 chat_service = ChatService()
 chat_service.init_chat_services()
 
-
-from flask import Response, stream_with_context, request
-import asyncio
 
 def generate_response(message):
     loop = asyncio.new_event_loop()
@@ -24,6 +21,7 @@ def generate_response(message):
     finally:
         loop.close()
 
+
 @chat.route("/message", methods=["POST"])
 def send_message():
     data = request.get_json()
@@ -31,8 +29,10 @@ def send_message():
     if not message:
         return jsonify({"error": "Message required"}), 400
 
-    return Response(stream_with_context(generate_response(message)), content_type="text/event-stream")
-
+    return Response(
+        stream_with_context(generate_response(message)),
+        content_type="text/event-stream",
+    )
 
 
 @chat.route("/health", methods=["GET"])
