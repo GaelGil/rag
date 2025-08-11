@@ -82,18 +82,18 @@ const Navigation = () => {
                   : "text-gray-700 hover:text-blue-600"
               }`}
             >
-              Content
+              Chat
             </Link>
           ) : (
             <Link
               to="/content"
               className={`no-underline${
-                location.pathname === "/content"
+                location.pathname === "/chat"
                   ? "text-blue-600 no-underline"
                   : "text-gray-700 hover:text-blue-600 no-underline"
               }`}
             >
-              Content
+              Chat
             </Link>
           )}
 

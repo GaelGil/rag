@@ -4,7 +4,7 @@ import ChatInput from "./ChatInput";
 import { PROJECT_LOGO } from "../../data/ProjectLogo";
 import { BASE_URL } from "../../api/url";
 import { PROJECT_NAME } from "../../data/ProjectName";
-import { io, Socket } from "socket.io-client";
+
 export interface ChatBlock {
   type: "thinking" | "redacted_thinking" | "text" | "tool_use" | "tool_result";
   content?: string;
@@ -34,7 +34,7 @@ const ChatInterface = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const socket = useRef<Socket | null>(null);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -42,35 +42,6 @@ const ChatInterface = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-
-  useEffect(() => {
-    // Only run once to connect to socket
-    socket.current = io("http://localhost:8080/chat");
-
-    socket.current.on("connect", () => {
-      console.log("🔌 Connected to WebSocket server");
-    });
-    socket.current.on("log", (data: { message: string }) => {
-      const streamedMessage: Message = {
-        id: Date.now().toString(),
-        role: "assistant",
-        content: data.message,
-        timestamp: new Date(),
-        isLoading: true, // optional – you can use this to style it differently
-      };
-
-      setMessages((prev) => [...prev, streamedMessage]);
-    });
-
-    socket.current.on("disconnect", () => {
-      console.log("❌ Disconnected from WebSocket server");
-    });
-
-    return () => {
-      socket.current?.off("log");
-      socket.current?.disconnect();
-    };
-  }, []);
 
   const sendMessage = async (content: string) => {
     if (!content.trim() || isLoading) return;
@@ -82,65 +53,34 @@ const ChatInterface = () => {
       timestamp: new Date(),
     };
 
-    const loadingMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      role: "assistant",
-      content: "Thinking...",
-      timestamp: new Date(),
-      isLoading: true,
-    };
-
-    setMessages((prev) => [...prev, userMessage, loadingMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${BASE_URL}/api/chat/message`, {
+      const res = await fetch(`${BASE_URL}/api/chat/message`, {
         method: "POST",
         credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: content }),
       });
-
-      const data = await response.json();
+      const data = await res.json();
 
       if (data.success) {
         const assistantMessage: Message = {
-          id: (Date.now() + 2).toString(),
+          id: (Date.now() + 1).toString(),
           role: "assistant",
-          content: "Assistant response",
+          content: "", // optionally parsed or plain text from data.response
           response: data.response,
           timestamp: new Date(),
         };
 
-        setMessages((prev) => {
-          const newMessages = [...prev];
-          newMessages[newMessages.length - 1] = assistantMessage;
-          return newMessages;
-        });
+        setMessages((prev) => [...prev, assistantMessage]);
       } else {
-        setMessages((prev) => {
-          const newMessages = [...prev];
-          newMessages[newMessages.length - 1] = {
-            ...newMessages[newMessages.length - 1],
-            content: `Error: ${data.error}`,
-            isLoading: false,
-          };
-          return newMessages;
-        });
+        throw new Error(data.error || "Unknown error");
       }
     } catch (error) {
-      console.error("Error sending message:", error);
-      setMessages((prev) => {
-        const newMessages = [...prev];
-        newMessages[newMessages.length - 1] = {
-          ...newMessages[newMessages.length - 1],
-          content: `Error: Failed to send message`,
-          isLoading: false,
-        };
-        return newMessages;
-      });
+      console.error("Error:", error);
+      // optionally update UI with error message
     } finally {
       setIsLoading(false);
     }
