@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-// import { getOrders } from "../api/orders";
 import type { Order } from "../types/Order";
 
 const OrdersPage = () => {
