@@ -46,7 +46,7 @@ tools = [
 
 class ChatService:
     def __init__(self):
-        self.chat_history: list[dict]
+        self.chat_history: list[dict] = []
         self.planner: PlannerAgent = None
         self.mcp_client: MCPClient = None
         self.llm: OpenAI = None
@@ -78,7 +78,7 @@ class ChatService:
     def add_chat_history(self, role: str, message: str):
         self.chat_history.append({"role": role, "content": message})
 
-    async def process_message(self, message):
+    def process_message(self, message):
         self.add_chat_history(role="user", message=message)
         stream = self.llm.responses.create(
             model=self.model_name, input=self.chat_history, stream=True
@@ -87,9 +87,15 @@ class ChatService:
         assistant_text = ""
         tool_call = None
 
-        # Stream tokens from initial response
-        async for event in stream:
+        for event in stream:
+            # Ignore events without choices
+            if not hasattr(event, "choices") or not event.choices:
+                continue
+
             delta = event.choices[0].delta
+            if not delta:
+                continue
+
             tool_call = delta.get("tool_call")
 
             if tool_call and isinstance(tool_call, dict):
@@ -97,20 +103,16 @@ class ChatService:
                 tool_args_str = tool_call.get("arguments")
 
                 if not tool_name or not tool_args_str:
-                    # Invalid tool_call, ignore and continue streaming text
                     tool_call = None
                 else:
-                    # Yield user-friendly message about tool call
-                    msg = f"\n[Calling tool {tool_name} with args {tool_args_str}]...\n"
-                    yield msg
-                    break  # Exit streaming to handle the tool call
+                    yield f"\n[Calling tool {tool_name} with args {tool_args_str}]...\n"
+                    break
 
             if not tool_call:
                 content = delta.get("content", "")
                 assistant_text += content
                 yield content
 
-        # Handle tool call if detected
         if tool_call:
             try:
                 tool_args = json.loads(tool_args_str)
@@ -126,29 +128,28 @@ class ChatService:
                 except Exception as e:
                     tool_result = f"[Error] Exception calling tool '{tool_name}': {e}"
 
-            # Add tool result to system messages in history
             self.add_chat_history("system", f"Tool {tool_name} returned: {tool_result}")
 
-            # Resume conversation with tool info in history
-            stream2 = self.client.responses.create(
-                model="gpt-5",
-                input=self.chat_history,
-                tools=self.tools,
-                stream=True,
+            stream2 = self.llm.responses.stream(
+                model=self.model_name, input=self.chat_history, tools=self.tools
             )
 
             assistant_text = ""
-            async for event in stream2:
+            for event in stream2:
+                if not hasattr(event, "choices") or not event.choices:
+                    continue
+
                 delta = event.choices[0].delta
+                if not delta:
+                    continue
+
                 content = delta.get("content", "")
                 assistant_text += content
                 yield content
 
-            # Append final assistant response to history
             self.add_chat_history("assistant", assistant_text)
 
         else:
-            # No tool call, append assistant text to history
             self.add_chat_history("assistant", assistant_text)
 
     def extract_tools(self, tool_call):

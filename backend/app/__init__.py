@@ -10,7 +10,7 @@ def create_app():
     app.config.from_object(Config)
     db.init_app(app)
     migrate.init_app(app, db)
-    socketio.init_app(app)
+    socketio.init_app(app, cors_allowed_origins="http://localhost:5173")
     bcrypt.init_app(app)
     CORS(
         app,
