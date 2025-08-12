@@ -2,11 +2,13 @@ from flask import Blueprint, jsonify, request, session
 from app.user.models import User
 from app.extensions import db, bcrypt
 from sqlalchemy.exc import IntegrityError
+from app.auth.decorators import login_required
 
 users = Blueprint("users", __name__)
 
 
 @users.route("/", methods=["GET"])
+@login_required
 def get_users():
     users = User.query.all()
     return jsonify(
@@ -15,6 +17,7 @@ def get_users():
 
 
 @users.route("/", methods=["POST"])
+@login_required
 def create_user():
     data = request.get_json()
     user = User(name=data["name"], email=data["email"])
@@ -24,6 +27,7 @@ def create_user():
 
 
 @users.route("/<int:user_id>", methods=["GET"])
+@login_required
 def get_user(user_id):
     user = User.query.get_or_404(user_id)
     return jsonify({"id": user.id, "name": user.name, "email": user.email})
@@ -82,12 +86,14 @@ def login():
 
 
 @users.route("/logout", methods=["POST"])
+@login_required
 def logout():
     session.clear()
     return jsonify({"msg": "Successfully logged out"}), 200
 
 
 @users.route("/profile/<int:user_id>", methods=["GET"])
+@login_required
 def profile(user_id):
     if "user_id" not in session:
         return jsonify({"error": "Unauthorized"}), 401
@@ -103,9 +109,8 @@ def profile(user_id):
 
 
 @users.route("/users/me", methods=["GET"])
+@login_required
 def get_current_user():
     user_id = session.get("user_id")
-    if not user_id:
-        return jsonify({"msg": "unauthenticated"}), 401
     user = User.query.get(user_id)
     return jsonify({"id": user.id, "username": user.username, "email": user.email})

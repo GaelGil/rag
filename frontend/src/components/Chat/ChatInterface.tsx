@@ -66,8 +66,7 @@ const ChatInterface = () => {
 
     // Use GET for SSE — message sent as query param
     const eventSource = new EventSource(
-      `${BASE_URL}/api/chat/message?message=${encodeURIComponent(content)}`,
-      { withCredentials: true }
+      `${BASE_URL}/api/chat/message?message=${encodeURIComponent(content)}`
     );
 
     let accumulatedMessage = "";
