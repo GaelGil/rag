@@ -1,7 +1,7 @@
 import { BASE_URL } from "./url";
 
 export const getCurrentUser = async () => {
-  const res = await fetch(`${BASE_URL}/users/me`, {
+  const res = await fetch(`${BASE_URL}/me`, {
     method: "GET",
     credentials: "include",
   });
@@ -11,7 +11,7 @@ export const getCurrentUser = async () => {
 };
 
 export const login = async (username: string, password: string) => {
-  const res = await fetch(`${BASE_URL}/users/login`, {
+  const res = await fetch(`${BASE_URL}/login`, {
     method: "POST",
     credentials: "include",
     headers: {
@@ -34,7 +34,7 @@ export const signup = async (
   email: string,
   password: string
 ) => {
-  const res = await fetch(`${BASE_URL}/users/signup`, {
+  const res = await fetch(`${BASE_URL}/signup`, {
     method: "POST",
     credentials: "include",
     headers: {
@@ -50,7 +50,7 @@ export const signup = async (
 };
 
 export const logout = async () => {
-  const res = await fetch(`${BASE_URL}/users/logout`, {
+  const res = await fetch(`${BASE_URL}/logout`, {
     method: "POST",
     credentials: "include",
   });

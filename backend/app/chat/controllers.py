@@ -7,8 +7,13 @@ chat_service.init_chat_services()
 
 
 def generate_response(message):
-    for chunk in chat_service.process_message(message):
-        yield f"data: {chunk}\n\n"
+    try:
+        for chunk in chat_service.process_message(message):
+            print(f"Yielding chunk: {chunk}")  # DEBUG
+            yield f"data: {chunk}\n\n"
+    except Exception as e:
+        print(f"Exception in generate_response: {e}")
+        yield f"data: [Error] {str(e)}\n\n"
 
 
 @chat.route("/message", methods=["GET"])
@@ -20,6 +25,12 @@ def send_message():
     return Response(
         stream_with_context(generate_response(message)),
         content_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Access-Control-Allow-Origin": "http://localhost:5173",
+            "Access-Control-Allow-Credentials": "true",
+        },
     )
 
 

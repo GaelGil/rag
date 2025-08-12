@@ -66,7 +66,7 @@ const ChatInterface = () => {
 
     // Use GET for SSE — message sent as query param
     const eventSource = new EventSource(
-      `${BASE_URL}/chat/message?message=${encodeURIComponent(content)}`,
+      `${BASE_URL}/api/chat/message?message=${encodeURIComponent(content)}`,
       { withCredentials: true }
     );
 
@@ -98,19 +98,6 @@ const ChatInterface = () => {
   return (
     <div className=" bg-white">
       {/* Chat Section */}
-      {/* Chat Header */}
-      <div className="bg-white border-b border-gray-100 px-8 py-4">
-        <div className="flex flex-row items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-[#ffffff] to-[#eceaff] rounded-lg flex items-center justify-center p-1">
-              {PROJECT_LOGO}
-            </div>
-            <p className="text-xl p-0 m-0 font-semibold text-gray-900">
-              {PROJECT_NAME}
-            </p>
-          </div>
-        </div>
-      </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto">
