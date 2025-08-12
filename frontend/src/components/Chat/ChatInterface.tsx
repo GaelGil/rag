@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import ChatMessage from "./ChatMessage";
 import ChatInput from "./ChatInput";
-import { PROJECT_LOGO } from "../../data/ProjectLogo";
 import { BASE_URL } from "../../api/url";
-import { PROJECT_NAME } from "../../data/ProjectName";
+import { fetchEventSource } from "@microsoft/fetch-event-source";
 
 export interface ChatBlock {
   type: "thinking" | "redacted_thinking" | "text" | "tool_use" | "tool_result";
@@ -43,7 +42,7 @@ const ChatInterface = () => {
     scrollToBottom();
   }, [messages]);
 
-  const sendMessage = (content: string) => {
+  const sendMessage = async (content: string) => {
     if (!content.trim() || isLoading) return;
 
     const userMessage: Message = {
@@ -53,7 +52,7 @@ const ChatInterface = () => {
       timestamp: new Date(),
     };
 
-    const loadingMessage: Message = {
+    const assistantMessage: Message = {
       id: (Date.now() + 1).toString(),
       role: "assistant",
       content: "",
@@ -61,44 +60,65 @@ const ChatInterface = () => {
       isLoading: true,
     };
 
-    setMessages((prev) => [...prev, userMessage, loadingMessage]);
+    setMessages((prev) => [...prev, userMessage, assistantMessage]);
     setIsLoading(true);
-
-    // Use GET for SSE — message sent as query param
-    const eventSource = new EventSource(
-      `${BASE_URL}/api/chat/message?message=${encodeURIComponent(content)}`
-    );
 
     let accumulatedMessage = "";
 
-    eventSource.onmessage = (event) => {
-      accumulatedMessage += event.data;
-      setMessages((prev) => {
-        const newMessages = [...prev];
-        newMessages[newMessages.length - 1] = {
-          ...newMessages[newMessages.length - 1],
-          content: accumulatedMessage,
-        };
-        return newMessages;
-      });
-    };
+    try {
+      await fetchEventSource(
+        `${BASE_URL}/api/chat/message?message=${encodeURIComponent(content)}`,
+        {
+          method: "GET",
+          credentials: "include", // send cookies/session for auth
+          onopen: async (res) => {
+            if (res.ok && res.status === 200) {
+              console.log("SSE connection opened");
+            } else {
+              const text = await res.text();
+              throw new Error(`SSE failed with status ${res.status}: ${text}`);
+            }
+          },
+          onmessage(ev) {
+            console.log("SSE chunk received:", ev.data);
+            // Append incoming chunk to accumulated message
+            accumulatedMessage += ev.data;
 
-    eventSource.onerror = (err) => {
-      console.error("SSE error:", err);
-      eventSource.close();
+            // Update the last message (assistant) content live
+            setMessages((prev) => {
+              const newMessages = [...prev];
+              const lastIndex = newMessages.length - 1;
+              if (
+                lastIndex >= 0 &&
+                newMessages[lastIndex].role === "assistant"
+              ) {
+                newMessages[lastIndex] = {
+                  ...newMessages[lastIndex],
+                  content: accumulatedMessage,
+                };
+              }
+              return newMessages;
+            });
+          },
+          onerror(err) {
+            console.error("SSE error:", err);
+            setIsLoading(false);
+            throw err;
+          },
+          onclose() {
+            setIsLoading(false);
+            console.log("SSE connection closed");
+          },
+        }
+      );
+    } catch (err) {
+      console.error("Streaming failed", err);
       setIsLoading(false);
-    };
-
-    eventSource.onopen = () => {
-      console.log("SSE connection opened");
-    };
+    }
   };
 
   return (
-    <div className=" bg-white">
-      {/* Chat Section */}
-
-      {/* Messages */}
+    <div className="bg-white">
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-4xl mx-auto px-8 py-6 space-y-6">
           {messages.length === 0 && (
@@ -119,8 +139,6 @@ const ChatInterface = () => {
           <div ref={messagesEndRef} />
         </div>
       </div>
-
-      {/* Input */}
 
       <div className="border-t border-gray-100 bg-white">
         <div className="max-w-4xl mx-auto px-8 py-6">

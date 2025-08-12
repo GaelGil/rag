@@ -1,5 +1,7 @@
 from flask import Blueprint, jsonify, request, stream_with_context, Response
 from app.chat.services import ChatService
+from app.auth.decorators import login_required
+import sys
 
 chat = Blueprint("chat", __name__)
 chat_service = ChatService()
@@ -11,12 +13,14 @@ def generate_response(message):
         for chunk in chat_service.process_message(message):
             print(f"Yielding chunk: {chunk}")  # DEBUG
             yield f"data: {chunk}\n\n"
+            sys.stdout.flush()  # 🔹 flush after each yield
     except Exception as e:
         print(f"Exception in generate_response: {e}")
         yield f"data: [Error] {str(e)}\n\n"
 
 
 @chat.route("/message", methods=["GET"])
+@login_required
 def send_message():
     message = request.args.get("message")  # ✅ read from query params for GET
     if not message:
@@ -35,6 +39,7 @@ def send_message():
 
 
 @chat.route("/health", methods=["GET"])
+@login_required
 def health_check():
     """Simple health check for the chat service."""
     return jsonify({"status": "healthy", "service": "chat"}), 200
