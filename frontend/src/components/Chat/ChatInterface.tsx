@@ -3,31 +3,7 @@ import ChatMessage from "./ChatMessage";
 import ChatInput from "./ChatInput";
 import { BASE_URL } from "../../api/url";
 import { fetchEventSource } from "@microsoft/fetch-event-source";
-
-export interface ChatBlock {
-  type: "thinking" | "redacted_thinking" | "text" | "tool_use" | "tool_result";
-  content?: string;
-  tool_name?: string;
-  tool_input?: any;
-  tool_result?: any;
-  tool_id?: string;
-  iteration?: number;
-}
-
-export interface ChatResponse {
-  blocks: ChatBlock[];
-  stop_reason: string;
-  total_iterations: number;
-}
-
-export interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  response?: ChatResponse;
-  timestamp: Date;
-  isLoading?: boolean;
-}
+import type { Message } from "../../types/Chat";
 
 const ChatInterface = () => {
   const [messages, setMessages] = useState<Message[]>([]);

@@ -1,14 +1,10 @@
-import type { Message } from "./ChatInterface";
 import ThinkingBlock from "./ChatThinkingBlock";
 import ToolBlock from "./ToolBlock";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
-
-interface ChatMessageProps {
-  message: Message;
-}
+import type { ChatMessageProps } from "../../types/Chat";
 
 const ChatMessage = ({ message }: ChatMessageProps) => {
   if (message.role === "user") {

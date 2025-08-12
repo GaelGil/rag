@@ -1,9 +1,5 @@
 import { useState } from "react";
-
-interface ChatInputProps {
-  onSendMessage: (message: string) => void;
-  disabled?: boolean;
-}
+import type { ChatInputProps } from "../../types/Chat";
 
 const ChatInput = ({ onSendMessage, disabled = false }: ChatInputProps) => {
   const [message, setMessage] = useState("");

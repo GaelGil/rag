@@ -1,13 +1,5 @@
 import { useState } from "react";
-
-interface ToolBlockProps {
-  type: "use" | "result";
-  toolName: string;
-  toolInput?: any;
-  toolResult?: any;
-  iteration?: number;
-}
-
+import type { ToolBlockProps } from "../../types/Chat";
 const ToolBlock = ({
   type,
   toolName,

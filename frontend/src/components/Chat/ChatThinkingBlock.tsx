@@ -1,10 +1,5 @@
 import { useState } from "react";
-
-interface ThinkingBlockProps {
-  content: string;
-  isRedacted?: boolean;
-  iteration?: number;
-}
+import type { ThinkingBlockProps } from "../../types/Chat";
 
 const ThinkingBlock = ({
   content,
