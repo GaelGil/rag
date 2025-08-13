@@ -127,6 +127,7 @@ class ChatService:
             # Stream partial text
             if event.type == "response.output_text.delta":
                 yield event.delta
+                logger.info(f"response.output_text.delta: {event.delta}")
                 print(event.delta, end="", flush=True)
 
             elif event.type == "response.output_text.done":
@@ -136,7 +137,7 @@ class ChatService:
             elif event.type == "response.output_item.added":
                 idx = getattr(event, "output_index", 0)
                 tool_calls[idx] = {"name": None, "arguments": "", "done": False}
-                print(f"[DEBUG] Added tool call slot idx={idx}")
+                logger.info(f"[DEBUG] Added tool call slot idx={idx}")
 
             # Tool name
             elif event.type in (
@@ -149,7 +150,7 @@ class ChatService:
                 delta = getattr(event, "delta", None)
                 if isinstance(delta, dict) and "name" in delta:
                     tool_calls[idx]["name"] = delta["name"]
-                    print(f"[DEBUG] Tool name for idx={idx}: {delta['name']}")
+                    logger.info(f"[DEBUG] Tool name for idx={idx}: {delta['name']}")
 
             # Tool arguments fragment
             elif event.type == "response.function_call_arguments.delta":
@@ -170,6 +171,7 @@ class ChatService:
                 if idx not in tool_calls:
                     tool_calls[idx] = {"name": None, "arguments": "", "done": False}
                 tool_calls[idx]["done"] = True
+                logger.info(f"[DEBUG] Marked tool idx={idx} done")
                 print(f"[DEBUG] Tool idx={idx} marked done")
 
         # Second pass: execute all tool calls
@@ -221,8 +223,9 @@ class ChatService:
             )
 
         # Third pass: get final assistant answer
-        if tool_calls:
+        if tool_calls:  # if we called tools to get updated information
             print("[DEBUG] Calling model for final answer...")
+            # Re-call the model with the result of tool calls
             final_stream = self.llm.responses.create(
                 model=self.model_name,
                 input=self.chat_history,
@@ -230,12 +233,14 @@ class ChatService:
             )
 
             print("Assistant (final): ", end="", flush=True)
+            # Stream partial text
             for ev in final_stream:
-                print(
+                logger.info(
                     f"\n[DEBUG EVENT FINAL] type={ev.type}, delta={getattr(ev, 'delta', None)}"
                 )
                 if ev.type == "response.output_text.delta":
                     yield ev.delta
+                    logger.info(ev.delta)
                     print(ev.delta, end="", flush=True)
                 elif ev.type == "response.output_text.done":
                     print()
