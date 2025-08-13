@@ -166,16 +166,18 @@ class ChatService:
                 )
                 # add up the argument strings for the tool call
                 tool_calls[idx]["arguments"] += args_frag
-                print(f"[DEBUG] Arg fragment for idx={idx}: {args_frag}")
+                logger.info(f"[DEBUG] Arg fragment for idx={idx}: {args_frag}")
 
-            # Mark tool done
+            # else if the tool call is done
             elif event.type == "response.function_call_arguments.done":
+                # output_index is the index of the tool call
                 idx = getattr(event, "output_index", 0)
+                # if the index is not in the tool calls dict, add it
                 if idx not in tool_calls:
                     tool_calls[idx] = {"name": None, "arguments": "", "done": False}
+                # mark the tool call as done
                 tool_calls[idx]["done"] = True
                 logger.info(f"[DEBUG] Marked tool idx={idx} done")
-                print(f"[DEBUG] Tool idx={idx} marked done")
 
         # Second pass: execute all tool calls
         for idx, entry in tool_calls.items():
@@ -227,8 +229,8 @@ class ChatService:
 
         # Third pass: get final assistant answer
         if tool_calls:  # if we called tools to get updated information
-            print("[DEBUG] Calling model for final answer...")
-            # Re-call the model with the result of tool calls
+            logger.info("[DEBUG] Calling model for final answer...")
+            # Call the model again with the tool call results
             final_stream = self.llm.responses.create(
                 model=self.model_name,
                 input=self.chat_history,
@@ -241,9 +243,11 @@ class ChatService:
                 logger.info(
                     f"\n[DEBUG EVENT FINAL] type={ev.type}, delta={getattr(ev, 'delta', None)}"
                 )
+                # if there is text, print it/yield it
                 if ev.type == "response.output_text.delta":
                     yield ev.delta
                     logger.info(ev.delta)
                     print(ev.delta, end="", flush=True)
+                # if there is no text, print a newline
                 elif ev.type == "response.output_text.done":
                     print()
