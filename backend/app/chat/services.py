@@ -19,17 +19,6 @@ logger = logging.getLogger(__name__)
 load_dotenv(Path("../../.env"))
 
 
-# Example tool function
-def get_weather(location: str) -> str:
-    # Here you would implement actual weather lookup logic
-    return f"The current temperature in {location} is 72°F."
-
-
-TOOL_HANDLERS = {
-    "get_weather": get_weather,
-}
-
-
 class ChatService:
     def __init__(self):
         self.chat_history: list[dict] = []
@@ -78,7 +67,6 @@ class ChatService:
             f"Tool Name Type {type(tool_name)}, Tool Args Type {type(tool_args)}"
         )
         try:
-            print("Executing Composio tool for non-weather request")
             print(f"User ID: {self.user_id}")
             composio = Composio()
             result = composio.tools.execute(
@@ -86,15 +74,15 @@ class ChatService:
                 user_id=self.user_id,
                 arguments=tool_args,
             )
-            print(f"Raw Composio result: {result}")
-            print(f"Composio result type: {type(result)}")
+            logger.info(f"Raw Composio result: {result}")
+            logger.info(f"Composio result type: {type(result)}")
             return result
         except Exception as e:
             error_msg = f"Tool execution failed: {str(e)}"
-            print("!!! TOOL EXECUTION EXCEPTION !!!")
-            print(f"Error type: {type(e).__name__}")
-            print(f"Error message: {str(e)}")
-            print(f"Traceback: {traceback.format_exc()}")
+            logger.info("!!! TOOL EXECUTION EXCEPTION !!!")
+            logger.info(f"Error type: {type(e).__name__}")
+            logger.info(f"Error message: {str(e)}")
+            logger.info(f"Traceback: {traceback.format_exc()}")
             return {"error": error_msg}
 
     def process_message(self, message):
@@ -180,37 +168,29 @@ class ChatService:
                 logger.info(f"[DEBUG] Marked tool idx={idx} done")
 
         # Execute the tool calls
-        for idx, entry in tool_calls.items():
-            tool_name = entry["name"]
-            args_str = entry["arguments"]
+        for tool_idx, tool in tool_calls.items():
+            tool_name = tool["name"]
+            args_str = tool["arguments"]
 
-            if not tool_name:
-                if len(self.tools) == 1 and "name" in self.tools[0]:
-                    tool_name = self.tools[0]["name"]
-                    print(f"[DEBUG] No tool name in stream; fallback to {tool_name}")
-                else:
-                    print(f"[DEBUG] No tool name for idx={idx}, skipping")
-                    continue
+            if not tool_name:  # if tool name is None
+                print(f"[DEBUG] No tool name for idx={tool_idx}, skipping")
+                continue
 
+            # try to parse the arguments
             try:
-                parsed_args = json.loads(args_str or "{}")
+                parsed_args = json.loads(args_str)
             except json.JSONDecodeError:
                 parsed_args = {}
-                print(f"[DEBUG] Failed to parse args for idx={idx}, using empty dict")
-
-            print(f"[DEBUG] Executing tool {tool_name} with args: {parsed_args}")
-
-            handler = TOOL_HANDLERS.get(tool_name)
-            if not handler:
-                print(f"[DEBUG] No handler for {tool_name}, skipping")
-                continue
+                logger.info(
+                    f"[DEBUG] Failed to parse args for idx={tool_idx}, using empty dict"
+                )
 
             try:
                 result = self.execute_tool(tool_name, parsed_args)
             except TypeError:
                 result = self.execute_tool(tool_name, parsed_args.get("location"))
 
-            logger.info(f"[DEBUG] Tool result for idx={idx}: {result}")
+            logger.info(f"[DEBUG] Tool result for idx={tool_idx}: {result}")
 
             self.chat_history.append(
                 {
