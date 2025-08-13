@@ -10,14 +10,12 @@ import os
 import json
 import logging
 
-# Configure basic logging (e.g., to console)
+# logging stuff
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
-
-# Get a logger instance
 logger = logging.getLogger(__name__)
-
+# load env
 load_dotenv(Path("../../.env"))
 
 
