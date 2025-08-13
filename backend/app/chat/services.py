@@ -8,6 +8,15 @@ from openai import OpenAI
 from composio import Composio  # type: ignore
 import os
 import json
+import logging
+
+# Configure basic logging (e.g., to console)
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
+# Get a logger instance
+logger = logging.getLogger(__name__)
 
 load_dotenv(Path("../../.env"))
 
@@ -66,6 +75,13 @@ class ChatService:
         pass
 
     def init_chat_services(self):
+        """
+        Initialize the chat services
+        Args:
+            None
+        Returns:
+            None
+        """
         print("Initializing OpenAI client ...")
         self.llm = OpenAIClient(api_key=os.getenv("OPENAI_API_KEY")).get_client()
 
@@ -78,100 +94,19 @@ class ChatService:
         self.add_chat_history(role="developer", message=CHATBOT_PROMPT)
 
     def add_chat_history(self, role: str, message: str):
+        """Adds a message to the chat history
+
+        Args:
+            role (str): The role of the message sender
+            message (str): The message content
+        Returns:
+            None
+        """
         self.chat_history.append({"role": role, "content": message})
-
-    def call_function(self, name, args):
-        if name == "get_weather":
-            res = get_weather(args["location"])
-            return res
-
-    def process_and_execute_tool(self, tool_calls, output_index):
-        """
-        Called when we have final_tool_calls[output_index]['done'] == True.
-        Parses args, runs the tool, appends tool result to chat_history and streams final answer.
-        """
-        entry = tool_calls.get(output_index)
-        if not entry:
-            print(f"[DEBUG] No entry found for output_index={output_index}")
-            return
-
-        tool_name = entry.get("name")
-        args_str = entry.get("arguments", "")
-        print(
-            f"[DEBUG] Processing tool call at index={output_index}: name={tool_name}, raw_args={args_str}"
-        )
-
-        # Fallback to single tool if name wasn't sent
-        if not tool_name:
-            if len(tools) == 1 and "name" in tools[0]:
-                tool_name = tools[0]["name"]
-                print(
-                    f"[DEBUG] No tool name in stream; falling back to single provided tool: {tool_name}"
-                )
-            else:
-                print(
-                    "[DEBUG] No tool name and multiple/no tools available — cannot execute safely."
-                )
-                return
-
-        try:
-            parsed_args = json.loads(args_str or "{}")
-        except json.JSONDecodeError:
-            parsed_args = {}
-            print("[DEBUG] Failed to parse JSON args; using empty dict")
-
-        print(f"[DEBUG] Parsed args for {tool_name}: {parsed_args}")
-
-        handler = TOOL_HANDLERS.get(tool_name)
-        if not handler:
-            print(f"[DEBUG] No local handler for tool '{tool_name}'")
-            return
-
-        # Execute the tool
-        try:
-            # adapt call depending on expected signature
-            tool_result = (
-                handler(**parsed_args)
-                if isinstance(parsed_args, dict)
-                else handler(parsed_args)
-            )
-        except TypeError:
-            # fallback if handler expects single positional arg
-            tool_result = handler(
-                parsed_args.get("location")
-                if isinstance(parsed_args, dict)
-                else parsed_args
-            )
-
-        print(f"[DEBUG] Tool result: {tool_result}")
-
-        # Append tool output for the model to consume
-        self.chat_history.append(
-            {
-                "role": "assistant",
-                "content": f"TOOL_NAME: {tool_name}, RESULT: {tool_result}",
-            }
-        )
-
-        # Re-call the model to get its final answer (streamed)
-        print("[DEBUG] Re-calling model to get final answer after tool execution...")
-        final_stream = self.llm.responses.create(
-            model=self.model_name, input=self.chat_history, tools=tools, stream=True
-        )
-
-        print("Assistant (final): ", end="", flush=True)
-        for ev in final_stream:
-            print(
-                f"\n[DEBUG EVENT FINAL] type={ev.type}, delta={getattr(ev, 'delta', None)}"
-            )
-            if ev.type == "response.output_text.delta":
-                print(ev.delta, end="", flush=True)
-            elif ev.type == "response.output_text.done":
-                print()  # newline
 
     def process_message(self, message):
         self.add_chat_history(role="user", message=message)
-        print(f"process_message called with message: {message}")  # DEBUG
+        logger.info(f"process_message called with message: {message}")
 
         stream = self.llm.responses.create(
             model=self.model_name,
