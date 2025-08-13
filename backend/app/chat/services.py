@@ -179,7 +179,7 @@ class ChatService:
                 tool_calls[idx]["done"] = True
                 logger.info(f"[DEBUG] Marked tool idx={idx} done")
 
-        # Second pass: execute all tool calls
+        # Execute the tool calls
         for idx, entry in tool_calls.items():
             tool_name = entry["name"]
             args_str = entry["arguments"]
@@ -206,19 +206,11 @@ class ChatService:
                 continue
 
             try:
-                result = (
-                    handler(**parsed_args)
-                    if isinstance(parsed_args, dict)
-                    else handler(parsed_args)
-                )
+                result = self.execute_tool(tool_name, parsed_args)
             except TypeError:
-                result = handler(
-                    parsed_args.get("location")
-                    if isinstance(parsed_args, dict)
-                    else parsed_args
-                )
+                result = self.execute_tool(tool_name, parsed_args.get("location"))
 
-            print(f"[DEBUG] Tool result for idx={idx}: {result}")
+            logger.info(f"[DEBUG] Tool result for idx={idx}: {result}")
 
             self.chat_history.append(
                 {
@@ -227,7 +219,7 @@ class ChatService:
                 }
             )
 
-        # Third pass: get final assistant answer
+        # Get the final answer
         if tool_calls:  # if we called tools to get updated information
             logger.info("[DEBUG] Calling model for final answer...")
             # Call the model again with the tool call results
