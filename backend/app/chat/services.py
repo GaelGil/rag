@@ -1,5 +1,5 @@
 from app.chat.agent.utils.OpenAIClient import OpenAIClient
-from app.chat.agent.MCP.client import MCPClient
+from app.chat.agent.utils.composio_tools import composio_tools
 from app.chat.agent.utils.prompts import CHATBOT_PROMPT
 from pathlib import Path
 from dotenv import load_dotenv
@@ -8,7 +8,7 @@ from composio import Composio
 import os
 import json
 import logging
-from app.chat.agent.utils.composio_tools import composio_tools  # type:  ignore
+import traceback
 
 # logging stuff
 logging.basicConfig(
@@ -30,36 +30,12 @@ TOOL_HANDLERS = {
 }
 
 
-# Define your tools schema like your snippet
-tools = [
-    {
-        "type": "function",
-        "name": "get_weather",
-        "description": "Get current temperature for a given location.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "location": {
-                    "type": "string",
-                    "description": "City and country e.g. Bogotá, Colombia",
-                }
-            },
-            "required": ["location"],
-            "additionalProperties": False,
-        },
-        "strict": True,
-    },
-]
-
-
 class ChatService:
     def __init__(self):
         self.chat_history: list[dict] = []
         self.model_name: str = "gpt-4.1-mini"
         self.llm: OpenAI = None
-        self.mcp_client: MCPClient = None
-        self.tools = tools
-        self.tool_functions = {"get_weather": get_weather}
+        self.tools = composio_tools
         self.composio = Composio()
         self.user_id = "0000-1111-2222"
 
@@ -86,6 +62,41 @@ class ChatService:
         """
         self.chat_history.append({"role": role, "content": message})
 
+    def execute_tool(self, tool_name, tool_args):
+        """Execute a tool
+
+        Args:
+            tool_name (str): The name of the tool to execute
+            tool_args (dict): The arguments to pass to the tool
+
+        Returns:
+            Any: The result of the tool
+
+        """
+        logger.info(f"Executing tool: {tool_name} with args: {tool_args}")
+        logger.info(
+            f"Tool Name Type {type(tool_name)}, Tool Args Type {type(tool_args)}"
+        )
+        try:
+            print("Executing Composio tool for non-weather request")
+            print(f"User ID: {self.user_id}")
+            composio = Composio()
+            result = composio.tools.execute(
+                slug=tool_name,
+                user_id=self.user_id,
+                arguments=tool_args,
+            )
+            print(f"Raw Composio result: {result}")
+            print(f"Composio result type: {type(result)}")
+            return result
+        except Exception as e:
+            error_msg = f"Tool execution failed: {str(e)}"
+            print("!!! TOOL EXECUTION EXCEPTION !!!")
+            print(f"Error type: {type(e).__name__}")
+            print(f"Error message: {str(e)}")
+            print(f"Traceback: {traceback.format_exc()}")
+            return {"error": error_msg}
+
     def process_message(self, message):
         self.add_chat_history(role="user", message=message)
         logger.info(f"process_message called with message: {message}")
@@ -106,46 +117,56 @@ class ChatService:
                 f"\n[DEBUG EVENT] type={event.type}, idx={getattr(event, 'output_index', None)}, delta={getattr(event, 'delta', None)}"
             )
 
-            # Stream partial text
+            # if there is text, print it
             if event.type == "response.output_text.delta":
                 yield event.delta
                 logger.info(f"response.output_text.delta: {event.delta}")
                 print(event.delta, end="", flush=True)
-
+            # if there is no text, print a newline
             elif event.type == "response.output_text.done":
                 print()
 
-            # New tool call slot
+            # else if there is a tool call
             elif event.type == "response.output_item.added":
+                # output_index is the index of the tool call
+                # because they come in chunks we need to keep track of the index
                 idx = getattr(event, "output_index", 0)
+                # if the index is not in the tool calls dict, add it
                 tool_calls[idx] = {"name": None, "arguments": "", "done": False}
                 logger.info(f"[DEBUG] Added tool call slot idx={idx}")
 
-            # Tool name
+            # else if there is a tool name
             elif event.type in (
                 "response.function_call.delta",
                 "response.tool_call.delta",
             ):
+                # output_index is the index of the tool call
                 idx = getattr(event, "output_index", 0)
-                if idx not in tool_calls:
+                if idx not in tool_calls:  # if not in the tool calls dict, add it
                     tool_calls[idx] = {"name": None, "arguments": "", "done": False}
+                # sometimes delta is a dict with "name"
                 delta = getattr(event, "delta", None)
+                # if delta is a dict with "name"
                 if isinstance(delta, dict) and "name" in delta:
+                    # add the name to the tool calls dict
                     tool_calls[idx]["name"] = delta["name"]
                     logger.info(f"[DEBUG] Tool name for idx={idx}: {delta['name']}")
 
-            # Tool arguments fragment
+            # else if there is a tool argument (they come in chunks as strings)
             elif event.type == "response.function_call_arguments.delta":
+                # output_index is the index of the tool call
                 idx = getattr(event, "output_index", 0)
-                if idx not in tool_calls:
+                if idx not in tool_calls:  # if not in the tool calls dict, add it
                     tool_calls[idx] = {"name": None, "arguments": "", "done": False}
-                frag = (
+                # delta (arguments) may be a string fragment so we add it
+                args_frag = (
                     event.delta
                     if not isinstance(event.delta, dict)
                     else json.dumps(event.delta)
                 )
-                tool_calls[idx]["arguments"] += frag
-                print(f"[DEBUG] Arg fragment for idx={idx}: {frag}")
+                # add up the argument strings for the tool call
+                tool_calls[idx]["arguments"] += args_frag
+                print(f"[DEBUG] Arg fragment for idx={idx}: {args_frag}")
 
             # Mark tool done
             elif event.type == "response.function_call_arguments.done":
