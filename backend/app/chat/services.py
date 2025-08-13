@@ -183,13 +183,13 @@ class ChatService:
 
         tool_calls = {}
 
+        # First pass: collect text + tool calls
         for event in stream:
-            # show the raw event for debugging
             print(
-                f"\n[DEBUG EVENT] type={event.type}, output_index={getattr(event, 'output_index', None)}, delta={getattr(event, 'delta', None)}"
+                f"\n[DEBUG EVENT] type={event.type}, idx={getattr(event, 'output_index', None)}, delta={getattr(event, 'delta', None)}"
             )
 
-            # Normal text streaming
+            # Stream partial text
             if event.type == "response.output_text.delta":
                 yield event.delta
                 print(event.delta, end="", flush=True)
@@ -197,158 +197,110 @@ class ChatService:
             elif event.type == "response.output_text.done":
                 print()
 
-            # When an output item is added, initialize storage for it
+            # New tool call slot
             elif event.type == "response.output_item.added":
                 idx = getattr(event, "output_index", 0)
-                tool_calls[idx] = {
-                    "item": getattr(event, "item", None),
-                    "name": None,
-                    "arguments": "",
-                    "done": False,
-                }
-                print(
-                    f"[DEBUG] output_item.added -> initialized final_tool_calls[{idx}]"
-                )
-            # Some streams send name under function_call.delta or tool_call.delta
+                tool_calls[idx] = {"name": None, "arguments": "", "done": False}
+                print(f"[DEBUG] Added tool call slot idx={idx}")
+
+            # Tool name
             elif event.type in (
                 "response.function_call.delta",
                 "response.tool_call.delta",
             ):
                 idx = getattr(event, "output_index", 0)
-                # ensure slot exists
                 if idx not in tool_calls:
-                    tool_calls[idx] = {
-                        "item": None,
-                        "name": None,
-                        "arguments": "",
-                        "done": False,
-                    }
-                # sometimes delta is a dict with "name"
+                    tool_calls[idx] = {"name": None, "arguments": "", "done": False}
                 delta = getattr(event, "delta", None)
                 if isinstance(delta, dict) and "name" in delta:
-                    yield delta["name"]
                     tool_calls[idx]["name"] = delta["name"]
-                    print(
-                        f"[DEBUG] Captured function/tool name for index={idx}: {delta['name']}"
-                    )
+                    print(f"[DEBUG] Tool name for idx={idx}: {delta['name']}")
 
-            # Arguments come token-by-token as strings
+            # Tool arguments fragment
             elif event.type == "response.function_call_arguments.delta":
                 idx = getattr(event, "output_index", 0)
                 if idx not in tool_calls:
-                    tool_calls[idx] = {
-                        "item": None,
-                        "name": None,
-                        "arguments": "",
-                        "done": False,
-                    }
-                # delta may be a string fragment
+                    tool_calls[idx] = {"name": None, "arguments": "", "done": False}
                 frag = (
                     event.delta
                     if not isinstance(event.delta, dict)
                     else json.dumps(event.delta)
                 )
                 tool_calls[idx]["arguments"] += frag
-                print(f"[DEBUG] Appended arg fragment to index={idx}: {frag}")
+                print(f"[DEBUG] Arg fragment for idx={idx}: {frag}")
 
+            # Mark tool done
             elif event.type == "response.function_call_arguments.done":
                 idx = getattr(event, "output_index", 0)
                 if idx not in tool_calls:
-                    tool_calls[idx] = {
-                        "item": None,
-                        "name": None,
-                        "arguments": "",
-                        "done": False,
-                    }
+                    tool_calls[idx] = {"name": None, "arguments": "", "done": False}
                 tool_calls[idx]["done"] = True
-                print(
-                    f"[DEBUG] function_call_arguments.done for index={idx}. full_args={tool_calls[idx]['arguments']}"
+                print(f"[DEBUG] Tool idx={idx} marked done")
+
+        # Second pass: execute all tool calls
+        for idx, entry in tool_calls.items():
+            tool_name = entry["name"]
+            args_str = entry["arguments"]
+
+            if not tool_name:
+                if len(self.tools) == 1 and "name" in self.tools[0]:
+                    tool_name = self.tools[0]["name"]
+                    print(f"[DEBUG] No tool name in stream; fallback to {tool_name}")
+                else:
+                    print(f"[DEBUG] No tool name for idx={idx}, skipping")
+                    continue
+
+            try:
+                parsed_args = json.loads(args_str or "{}")
+            except json.JSONDecodeError:
+                parsed_args = {}
+                print(f"[DEBUG] Failed to parse args for idx={idx}, using empty dict")
+
+            print(f"[DEBUG] Executing tool {tool_name} with args: {parsed_args}")
+
+            handler = TOOL_HANDLERS.get(tool_name)
+            if not handler:
+                print(f"[DEBUG] No handler for {tool_name}, skipping")
+                continue
+
+            try:
+                result = (
+                    handler(**parsed_args)
+                    if isinstance(parsed_args, dict)
+                    else handler(parsed_args)
+                )
+            except TypeError:
+                result = handler(
+                    parsed_args.get("location")
+                    if isinstance(parsed_args, dict)
+                    else parsed_args
                 )
 
-                if idx:
-                    # process this particular tool call immediately
-                    # self.process_and_execute_tool(idx)
-                    entry = tool_calls.get(idx)
-                    if not entry:
-                        print(f"[DEBUG] No entry found for output_index={idx}")
-                        return
+            print(f"[DEBUG] Tool result for idx={idx}: {result}")
 
-                    tool_name = entry.get("name")
-                    args_str = entry.get("arguments", "")
-                    print(
-                        f"[DEBUG] Processing tool call at index={idx}: name={tool_name}, raw_args={args_str}"
-                    )
+            self.chat_history.append(
+                {
+                    "role": "assistant",
+                    "content": f"TOOL_NAME: {tool_name}, RESULT: {result}",
+                }
+            )
 
-                    # Fallback to single tool if name wasn't sent
-                    if not tool_name:
-                        if len(tools) == 1 and "name" in tools[0]:
-                            tool_name = tools[0]["name"]
-                            print(
-                                f"[DEBUG] No tool name in stream; falling back to single provided tool: {tool_name}"
-                            )
-                        else:
-                            print(
-                                "[DEBUG] No tool name and multiple/no tools available — cannot execute safely."
-                            )
-                            return
+        # Third pass: get final assistant answer
+        if tool_calls:
+            print("[DEBUG] Calling model for final answer...")
+            final_stream = self.llm.responses.create(
+                model=self.model_name,
+                input=self.chat_history,
+                stream=True,
+            )
 
-                    try:
-                        parsed_args = json.loads(args_str or "{}")
-                    except json.JSONDecodeError:
-                        parsed_args = {}
-                        print("[DEBUG] Failed to parse JSON args; using empty dict")
-
-                    print(f"[DEBUG] Parsed args for {tool_name}: {parsed_args}")
-
-                    handler = TOOL_HANDLERS.get(tool_name)
-                    if not handler:
-                        print(f"[DEBUG] No local handler for tool '{tool_name}'")
-                        return
-
-                    # Execute the tool
-                    try:
-                        # adapt call depending on expected signature
-                        tool_result = (
-                            handler(**parsed_args)
-                            if isinstance(parsed_args, dict)
-                            else handler(parsed_args)
-                        )
-                    except TypeError:
-                        # fallback if handler expects single positional arg
-                        tool_result = handler(
-                            parsed_args.get("location")
-                            if isinstance(parsed_args, dict)
-                            else parsed_args
-                        )
-
-                    print(f"[DEBUG] Tool result: {tool_result}")
-
-                    # Append tool output for the model to consume
-                    self.chat_history.append(
-                        {
-                            "role": "assistant",
-                            "content": f"TOOL_NAME: {tool_name}, RESULT: {tool_result}",
-                        }
-                    )
-
-                    # Re-call the model to get its final answer (streamed)
-                    print(
-                        "[DEBUG] Re-calling model to get final answer after tool execution..."
-                    )
-                    final_stream = self.llm.responses.create(
-                        model=self.model_name,
-                        input=self.chat_history,
-                        tools=tools,
-                        stream=True,
-                    )
-
-                    print("Assistant (final): ", end="", flush=True)
-                    for ev in final_stream:
-                        print(
-                            f"\n[DEBUG EVENT FINAL] type={ev.type}, delta={getattr(ev, 'delta', None)}"
-                        )
-                        if ev.type == "response.output_text.delta":
-                            yield ev.delta
-                            print(ev.delta, end="", flush=True)
-                        elif ev.type == "response.output_text.done":
-                            print()
+            print("Assistant (final): ", end="", flush=True)
+            for ev in final_stream:
+                print(
+                    f"\n[DEBUG EVENT FINAL] type={ev.type}, delta={getattr(ev, 'delta', None)}"
+                )
+                if ev.type == "response.output_text.delta":
+                    yield ev.delta
+                    print(ev.delta, end="", flush=True)
+                elif ev.type == "response.output_text.done":
+                    print()
