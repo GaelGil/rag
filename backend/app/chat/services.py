@@ -1,14 +1,14 @@
 from app.chat.agent.utils.OpenAIClient import OpenAIClient
-from app.chat.agent.utils.PlannerAgent import PlannerAgent
 from app.chat.agent.MCP.client import MCPClient
 from app.chat.agent.utils.prompts import CHATBOT_PROMPT
 from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
-from composio import Composio  # type: ignore
+from composio import Composio
 import os
 import json
 import logging
+from app.chat.agent.utils.composio_tools import composio_tools  # type:  ignore
 
 # logging stuff
 logging.basicConfig(
@@ -55,22 +55,13 @@ tools = [
 class ChatService:
     def __init__(self):
         self.chat_history: list[dict] = []
-        self.planner: PlannerAgent = None
-        self.mcp_client: MCPClient = None
+        self.model_name: str = "gpt-4.1-mini"
         self.llm: OpenAI = None
+        self.mcp_client: MCPClient = None
         self.tools = tools
         self.tool_functions = {"get_weather": get_weather}
-        self.model_name: str = "gpt-4.1-mini"
         self.composio = Composio()
         self.user_id = "0000-1111-2222"
-        self.previous_task_results: list[dict] = [
-            {
-                "task_id": "0",
-                "task": "first task, no previous task yet",
-                "results": "first task, no results yet",
-            }
-        ]
-        pass
 
     def init_chat_services(self):
         """
@@ -82,13 +73,6 @@ class ChatService:
         """
         print("Initializing OpenAI client ...")
         self.llm = OpenAIClient(api_key=os.getenv("OPENAI_API_KEY")).get_client()
-
-        print("Initializing Planner Agent ...")
-        self.planner = PlannerAgent(
-            dev_prompt=CHATBOT_PROMPT,
-            llm=self.llm,
-            messages=[],
-        )
         self.add_chat_history(role="developer", message=CHATBOT_PROMPT)
 
     def add_chat_history(self, role: str, message: str):
