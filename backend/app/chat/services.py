@@ -185,11 +185,25 @@ class ChatService:
                     f"[DEBUG] Failed to parse args for idx={tool_idx}, using empty dict"
                 )
 
+            tool_use = {
+                "type": "tool_use",
+                "tool_name": tool_name,
+                "tool_input": parsed_args,
+            }
+            yield {"type": "block", "block": tool_use}
             try:
                 result = self.execute_tool(tool_name, parsed_args)
             except TypeError:
                 result = self.execute_tool(tool_name, parsed_args.get("location"))
 
+            tool_result_data = {
+                "type": "tool_result",
+                "tool_name": tool_name,
+                "tool_input": parsed_args,
+                "tool_result": result,
+            }
+
+            yield {"type": "block", "block": tool_result_data}
             logger.info(f"[DEBUG] Tool result for idx={tool_idx}: {result}")
 
             self.chat_history.append(

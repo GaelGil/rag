@@ -1,16 +1,19 @@
-import ThinkingBlock from "./ChatThinkingBlock";
-import ToolBlock from "./ToolBlock";
+import type { Message } from "../Chat/ChatInterface";
+import ToolBlock from "../Chat/ToolBlock";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
-import type { ChatMessageProps } from "../../types/Chat";
+
+interface ChatMessageProps {
+  message: Message;
+}
 
 const ChatMessage = ({ message }: ChatMessageProps) => {
   if (message.role === "user") {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[70%] bg-blue-600 text-white rounded-lg px-4 py-2">
+        <div className="max-w-[90%] bg-blue-600 text-white rounded-lg px-4 py-2">
           <div className="prose prose-sm prose-invert max-w-none">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
@@ -70,7 +73,7 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
   // Assistant message
   return (
     <div className="flex justify-start">
-      <div className="max-w-[85%] bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <div className="max-w-[95%] bg-white rounded-lg border border-gray-200 overflow-hidden">
         {message.isLoading ? (
           <div className="px-4 py-3">
             <div className="flex items-center space-x-2">
@@ -83,15 +86,7 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
             {message.response.blocks.map((block, index) => {
               switch (block.type) {
                 case "thinking":
-                case "redacted_thinking":
-                  return (
-                    <ThinkingBlock
-                      key={index}
-                      content={block.content || ""}
-                      isRedacted={block.type === "redacted_thinking"}
-                      iteration={block.iteration}
-                    />
-                  );
+
                 case "tool_use":
                   return (
                     <ToolBlock
@@ -99,7 +94,6 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
                       type="use"
                       toolName={block.tool_name || ""}
                       toolInput={block.tool_input}
-                      iteration={block.iteration}
                     />
                   );
                 case "tool_result":
@@ -110,9 +104,9 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
                       toolName={block.tool_name || ""}
                       toolInput={block.tool_input}
                       toolResult={block.tool_result}
-                      iteration={block.iteration}
                     />
                   );
+
                 case "text":
                   return (
                     <div
@@ -231,13 +225,24 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
                   return null;
               }
             })}
-            <div className="px-4 py-2 bg-gray-50 border-t border-gray-100">
-              <p className="text-xs text-gray-500">
-                Completed in {message.response.total_iterations} iteration
-                {message.response.total_iterations !== 1 ? "s" : ""} •{" "}
-                {message.timestamp.toLocaleTimeString()}
-              </p>
-            </div>
+            {message.isStreaming ? (
+              <div className="px-4 py-2 bg-gray-50 border-t border-gray-100">
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                  <span className="text-xs text-gray-500">
+                    Assistant is thinking...
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="px-4 py-2 bg-gray-50 border-t border-gray-100">
+                <p className="text-xs text-gray-500">
+                  Completed in {message.response.total_iterations} iteration
+                  {message.response.total_iterations !== 1 ? "s" : ""} •{" "}
+                  {message.timestamp.toLocaleTimeString()}
+                </p>
+              </div>
+            )}
           </div>
         ) : (
           <div className="px-4 py-3">
