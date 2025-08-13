@@ -1,7 +1,7 @@
 composio_tools = [
     {
         "type": "function",
-        "name": "COMPOSIO_SEARCH_SEARCH",
+        "name": "COMPOSIO_SEARCH_EVENT_SEARCH",
         "description": "The eventsearch class enables scraping of google events search queries. it conducts an event search using the composio events search api, retrieving information on events such as concerts, festivals, and other activities based on the provided query.",
         "parameters": {
             "type": "object",
@@ -12,7 +12,9 @@ composio_tools = [
                 }
             },
             "required": ["query"],
+            "additionalProperties": False,
         },
+        "strict": True,
     },
     {
         "type": "function",
@@ -27,7 +29,9 @@ composio_tools = [
                 }
             },
             "required": ["query"],
+            "additionalProperties": False,
         },
+        "strict": True,
     },
     {
         "type": "function",
@@ -42,7 +46,9 @@ composio_tools = [
                 }
             },
             "required": ["query"],
+            "additionalProperties": False,
         },
+        "strict": True,
     },
     {
         "type": "function",
@@ -57,6 +63,8 @@ composio_tools = [
                 }
             },
             "required": ["query"],
+            "additionalProperties": False,
         },
+        "strict": True,
     },
 ]
