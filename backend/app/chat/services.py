@@ -1,16 +1,13 @@
 from app.chat.agent.utils.OpenAIClient import OpenAIClient
 from app.chat.agent.utils.PlannerAgent import PlannerAgent
-
-# from app.chat.agent.utils.Executor import Executor
 from app.chat.agent.MCP.client import MCPClient
-
-# from app.chat.agent.utils.schemas import Plan
 from app.chat.agent.utils.prompts import CHATBOT_PROMPT
 from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
 from composio import Composio  # type: ignore
 import os
+import json
 
 load_dotenv(Path("../../.env"))
 
@@ -73,18 +70,26 @@ class ChatService:
             llm=self.llm,
             messages=[],
         )
+        self.add_chat_history(role="developer", message=CHATBOT_PROMPT)
 
     def add_chat_history(self, role: str, message: str):
         self.chat_history.append({"role": role, "content": message})
 
-    def process_message(self, message):
-        import json
+    def call_function(self, name, args):
+        if name == "get_weather":
+            res = get_weather(args["location"])
+            return res
 
+    def process_message(self, message):
         self.add_chat_history(role="user", message=message)
         print(f"process_message called with message: {message}")  # DEBUG
 
         stream = self.llm.responses.create(
-            model=self.model_name, input=self.chat_history, stream=True
+            model=self.model_name,
+            input=self.chat_history,
+            tools=self.tools,
+            tool_choice="auto",
+            stream=True,
         )
 
         assistant_text = ""
@@ -94,9 +99,7 @@ class ChatService:
         for event in stream:
             print(f"Received event: {event}")
 
-            # Check if event has a direct 'delta' attribute (like ResponseTextDeltaEvent)
             if hasattr(event, "delta"):
-                # 'delta' could be a string chunk or dict; handle both
                 delta_content = event.delta
                 if isinstance(delta_content, str):
                     content = delta_content
@@ -110,91 +113,59 @@ class ChatService:
                 yield content
                 continue
 
-            # Else check if event has choices attribute (older style or tool calls)
-            if hasattr(event, "choices") and event.choices:
-                delta = event.choices[0].delta
-                if not delta:
+            for tool_call in event.output:
+                if tool_call.type != "function_call":
                     continue
+                # select tool name
+                tool_name = tool_call.name
+                # get the arguments for the tool
+                tool_args = json.loads(tool_call.arguments)
 
-                tool_call = delta.get("tool_call")
+                # call the function
+                if tool_name == "get_weather":
+                    # call the function
+                    result = self.call_function(tool_name, tool_args)
 
-                if tool_call and isinstance(tool_call, dict):
-                    tool_name = tool_call.get("name")
-                    tool_args_str = tool_call.get("arguments")
+                    # Add tool result to chat history
+                    self.add_chat_history(
+                        role="system",
+                        message=f"Tool {tool_name} returned: {result}",
+                    )
 
-                    if not tool_name or not tool_args_str:
-                        tool_call = None
-                    else:
-                        # Yield tool call message
-                        yield f"\n[Calling tool {tool_name} with args {tool_args_str}]...\n"
+                    stream2 = self.llm.responses.stream(
+                        model=self.model_name,
+                        input=self.chat_history,
+                    )
 
-                        # Try parsing tool arguments
-                        try:
-                            tool_args = json.loads(tool_args_str)
-                        except (json.JSONDecodeError, TypeError):
-                            tool_args = {}
+                    assistant_text = ""
+                    for event in stream2:
+                        print(f"Received event: {event}")
 
-                        # Call the tool function
-                        tool_function = self.tool_functions.get(tool_name)
-                        if not tool_function:
-                            tool_result = f"[Error] Tool '{tool_name}' not implemented."
-                        else:
-                            try:
-                                tool_result = tool_function(**tool_args)
-                            except Exception as e:
-                                tool_result = (
-                                    f"[Error] Exception calling tool '{tool_name}': {e}"
-                                )
+                        # Check if event has a direct 'delta' attribute (like ResponseTextDeltaEvent)
+                        if hasattr(event, "delta"):
+                            # 'delta' could be a string chunk or dict; handle both
+                            delta_content = event.delta
+                            if isinstance(delta_content, str):
+                                content = delta_content
+                            elif isinstance(delta_content, dict):
+                                # If dict, extract 'content' field safely
+                                content = delta_content.get("content", "")
+                            else:
+                                content = ""
 
-                        # Add tool result to chat history
-                        self.add_chat_history(
-                            "system", f"Tool {tool_name} returned: {tool_result}"
-                        )
+                            assistant_text += content
+                            yield content
+                            continue
 
-                        # Second streaming loop: continue with updated chat history
-                        stream2 = self.llm.responses.stream(
-                            model=self.model_name,
-                            input=self.chat_history,
-                            tools=self.tools,
-                        )
+                    self.add_chat_history("assistant", assistant_text)
 
-                        assistant_text = ""
-                        for event2 in stream2:
-                            if not hasattr(event2, "choices") or not event2.choices:
-                                continue
-
-                            delta2 = event2.choices[0].delta
-                            if not delta2:
-                                continue
-
-                            content2 = delta2.get("content", "")
-                            assistant_text += content2
-                            yield content2
-
-                        # Add final assistant message to history
-                        self.add_chat_history("assistant", assistant_text)
-
-                        # End generator after finishing second stream
-                        return
-
-                if not tool_call:
-                    content = delta.get("content", "")
-                    assistant_text += content
-                    yield content
+                    return
 
             else:
-                # Unknown event type or no content, just ignore
                 continue
+
+        print(self.chat_history)
 
         # If no tool call, add full assistant response after stream ends
         if not tool_call:
             self.add_chat_history("assistant", assistant_text)
-
-    def extract_tools(self, tool_call):
-        pass
-
-    def call_tools(self, tool_calls):
-        pass
-
-    def stream_response(self, message):
-        pass

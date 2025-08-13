@@ -40,6 +40,7 @@ const ChatInterface = () => {
     setIsLoading(true);
 
     let accumulatedMessage = "";
+    let firstChunkReceived = false;
 
     try {
       await fetchEventSource(
@@ -57,31 +58,62 @@ const ChatInterface = () => {
           },
           onmessage(ev) {
             console.log("SSE chunk received:", ev.data);
-            // Append incoming chunk to accumulated message
             accumulatedMessage += ev.data;
 
-            // Update the last message (assistant) content live
+            // Update assistant message content and on first chunk remove its isLoading flag
             setMessages((prev) => {
+              if (prev.length === 0) return prev;
               const newMessages = [...prev];
               const lastIndex = newMessages.length - 1;
-              if (
-                lastIndex >= 0 &&
-                newMessages[lastIndex].role === "assistant"
-              ) {
-                newMessages[lastIndex] = {
-                  ...newMessages[lastIndex],
-                  content: accumulatedMessage,
-                };
+
+              // make sure last message is the assistant placeholder
+              if (lastIndex < 0) return prev;
+
+              const last = { ...newMessages[lastIndex] };
+              last.content = accumulatedMessage;
+              last.timestamp = new Date(); // force re-render
+              // on first chunk, stop showing the "Thinking..." spinner and display content
+              if (!firstChunkReceived) {
+                last.isLoading = false;
+                firstChunkReceived = true;
               }
+
+              newMessages[lastIndex] = last;
               return newMessages;
             });
           },
           onerror(err) {
             console.error("SSE error:", err);
+            // mark last message as not loading and append error text
+            setMessages((prev) => {
+              if (prev.length === 0) return prev;
+              const newMessages = [...prev];
+              const lastIndex = newMessages.length - 1;
+              const last = { ...newMessages[lastIndex] };
+              last.isLoading = false;
+              last.content =
+                (last.content || "") + `\n\n[Error receiving stream]`;
+              last.timestamp = new Date();
+              newMessages[lastIndex] = last;
+              return newMessages;
+            });
             setIsLoading(false);
+            // rethrow to let fetchEventSource handle closure
             throw err;
           },
           onclose() {
+            // streaming finished: ensure assistant message is marked not loading and final content is saved
+            setMessages((prev) => {
+              if (prev.length === 0) return prev;
+              const newMessages = [...prev];
+              const lastIndex = newMessages.length - 1;
+              const last = { ...newMessages[lastIndex] };
+              last.isLoading = false;
+              last.content = accumulatedMessage;
+              last.timestamp = new Date();
+              newMessages[lastIndex] = last;
+              return newMessages;
+            });
             setIsLoading(false);
             console.log("SSE connection closed");
           },
