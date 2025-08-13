@@ -4,15 +4,9 @@ import wikipedia
 from mcp.server.fastmcp import FastMCP
 import xml.etree.ElementTree as ET
 from mcp.server.fastmcp.utilities.logging import get_logger
-from openai import OpenAI
-import os
-
-
 # run using python -m MCP.server
 
 ARXIV_NAMESPACE = "{http://www.w3.org/2005/Atom}"
-LLM = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
 logger = get_logger(__name__)
 
 
