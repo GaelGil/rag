@@ -44,6 +44,7 @@ const ChatInterface = () => {
     let firstChunkReceived = false;
 
     try {
+      // fetch event source
       await fetchEventSource(
         `${BASE_URL}/api/chat/message?message=${encodeURIComponent(content)}`,
         {
@@ -51,27 +52,31 @@ const ChatInterface = () => {
           credentials: "include",
           onopen: async (res) => {
             if (res.ok && res.status === 200) {
+              // SSE connection opened
               console.log("SSE connection opened");
             } else {
+              // SSE connection failed
               const text = await res.text();
               throw new Error(`SSE failed with status ${res.status}: ${text}`);
             }
           },
+          // on message event
           onmessage(ev) {
             console.log("SSE chunk received:", ev.data);
-            accumulatedMessage += ev.data;
+            console.log("Parsed chunk:", JSON.parse(ev.data));
+            accumulatedMessage += ev.data; // append chunk to accumulated message
 
             // Update assistant message content and on first chunk remove its isLoading flag
             setMessages((prev) => {
               if (prev.length === 0) return prev;
-              const newMessages = [...prev];
-              const lastIndex = newMessages.length - 1;
+              const newMessages = [...prev]; // create new array with previous messages
+              const lastIndex = newMessages.length - 1; // get index of last message
 
               // make sure last message is the assistant placeholder
               if (lastIndex < 0) return prev;
 
-              const last = { ...newMessages[lastIndex] };
-              last.content = accumulatedMessage;
+              const last = { ...newMessages[lastIndex] }; // make a copy of the last message
+              last.content = accumulatedMessage; // update content
               last.timestamp = new Date(); // force re-render
               // on first chunk, stop showing the "Thinking..." spinner and display content
               if (!firstChunkReceived) {
