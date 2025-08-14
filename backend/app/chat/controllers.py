@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request, stream_with_context, Response
 from app.chat.services import ChatService
 from app.auth.decorators import login_required
 import sys
+import json
 
 chat = Blueprint("chat", __name__)
 chat_service = ChatService()
@@ -11,10 +12,11 @@ chat_service.init_chat_services()
 def generate_response(message):
     try:
         for chunk in chat_service.process_message(message):
-            yield f"data: {chunk}\n\n"
-            sys.stdout.flush()  # 🔹 flush after each yield
+            if isinstance(chunk, str):
+                yield f"data: {chunk}\n\n"
+                sys.stdout.flush()
     except Exception as e:
-        yield f"data: [Error] {str(e)}\n\n"
+        yield f"data: {json.dumps({'type': 'error', 'text': str(e)})}\n\n"
 
 
 @chat.route("/message", methods=["GET"])

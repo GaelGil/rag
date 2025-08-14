@@ -18,6 +18,19 @@ const ChatInterface = () => {
     scrollToBottom();
   }, [messages]);
 
+  function updateLastAssistantMessage(content: string, isLoading = true) {
+    setMessages((prev) => {
+      if (prev.length === 0) return prev;
+      const newMessages = [...prev];
+      const lastIndex = newMessages.length - 1;
+      const last = { ...newMessages[lastIndex] };
+      last.content = content;
+      last.isLoading = isLoading;
+      newMessages[lastIndex] = last;
+      return newMessages;
+    });
+  }
+
   const sendMessage = async (content: string) => {
     if (!content.trim() || isLoading) return;
 
@@ -41,7 +54,7 @@ const ChatInterface = () => {
     setIsLoading(true);
 
     let accumulatedMessage = "";
-    let firstChunkReceived = false;
+    // let firstChunkReceived = false;
 
     try {
       // fetch event source
@@ -62,31 +75,51 @@ const ChatInterface = () => {
           },
           // on message event
           onmessage(ev) {
-            console.log("SSE chunk received:", ev.data);
-            console.log("Parsed chunk:", JSON.parse(ev.data));
-            accumulatedMessage += ev.data; // append chunk to accumulated message
+            try {
+              const parsed = JSON.parse(ev.data);
 
-            //
-            setMessages((prev) => {
-              if (prev.length === 0) return prev; //
-              const newMessages = [...prev]; // create new array with previous messages
-              const lastIndex = newMessages.length - 1; // get index of last message
+              if (!parsed || typeof parsed !== "object") return;
 
-              // make sure last message is the assistant placeholder
-              if (lastIndex < 0) return prev;
-
-              const last = { ...newMessages[lastIndex] }; // make a copy of the last message
-              last.content = accumulatedMessage; // update content
-              last.timestamp = new Date(); // add timestamp
-              // on first chunk, stop showing the "Thinking..." spinner and display content
-              if (!firstChunkReceived) {
-                last.isLoading = false;
-                firstChunkReceived = true;
+              switch (parsed.type) {
+                case "init_response":
+                case "final_response":
+                  accumulatedMessage = parsed.text || "";
+                  updateLastAssistantMessage(
+                    accumulatedMessage,
+                    parsed.type === "init_response"
+                  );
+                  break;
+                case "tool_use":
+                  updateLastAssistantMessage(
+                    accumulatedMessage +
+                      `\n\n🔧 Using tool: ${
+                        parsed.tool_name ?? "unknown"
+                      }\n${JSON.stringify(parsed.tool_input ?? {}, null, 2)}`
+                  );
+                  break;
+                case "tool_result":
+                  updateLastAssistantMessage(
+                    accumulatedMessage +
+                      `\n\n📄 Tool result: ${JSON.stringify(
+                        parsed.tool_result ?? {},
+                        null,
+                        2
+                      )}`
+                  );
+                  break;
+                case "error":
+                  updateLastAssistantMessage(
+                    accumulatedMessage +
+                      `\n\n❌ Error: ${parsed.text ?? "Unknown error"}`,
+                    false
+                  );
+                  break;
+                default:
+                  console.warn("Unknown SSE type:", parsed.type);
               }
-
-              newMessages[lastIndex] = last; // add updated last message
-              return newMessages;
-            });
+            } catch (err) {
+              console.error("Invalid SSE chunk:", ev.data);
+            }
           },
           // on error
           onerror(err) {
