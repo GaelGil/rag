@@ -106,7 +106,7 @@ class ChatService:
 
             # if there is text, print it
             if event.type == "response.output_text.delta":
-                yield event.delta
+                yield json.dumps({"type": "response", "text": event.delta})
                 logger.info(f"response.output_text.delta: {event.delta}")
                 print(event.delta, end="", flush=True)
             # if there is no text, print a newline
@@ -192,30 +192,29 @@ class ChatService:
                     f"[DEBUG] Failed to parse args for idx={tool_idx}, using empty dict"
                 )
 
-            # TODO: update yields to do
-            # yield {'type': 'tool_use', 'tool_name': tool_name, 'tool_input': parsed_args}
-            # yield {'type': 'tool_result', 'tool_name': tool_name, 'tool_input': parsed_args, 'tool_result': result}
-            # yield {'type': 'response', 'text': event.delta} for both final and initial response
-            # maybe not for reponse since we want to load the chunks as they are comming
-            tool_use = {
-                "type": "tool_use",
-                "tool_name": tool_name,
-                "tool_input": parsed_args,
-            }
-            yield {"type": "block", "block": tool_use}
+            yield json.dumps(
+                {"type": "tool_use", "tool_name": tool_name, "tool_input": parsed_args}
+            )
             try:
                 result = self.execute_tool(tool_name, parsed_args)
             except TypeError:
                 result = self.execute_tool(tool_name, parsed_args.get("location"))
 
-            tool_result_data = {
-                "type": "tool_result",
-                "tool_name": tool_name,
-                "tool_input": parsed_args,
-                "tool_result": result,
-            }
+            # tool_result_data = {
+            #     "type": "tool_result",
+            #     "tool_name": tool_name,
+            #     "tool_input": parsed_args,
+            #     "tool_result": result,
+            # }
 
-            yield {"type": "block", "block": tool_result_data}
+            yield json.dumps(
+                {
+                    "type": "tool_result",
+                    "tool_name": tool_name,
+                    "tool_input": parsed_args,
+                    "tool_result": result,
+                }
+            )
             logger.info(f"[DEBUG] Tool result for idx={tool_idx}: {result}")
 
             self.chat_history.append(
@@ -243,7 +242,7 @@ class ChatService:
                 )
                 # if there is text, print it/yield it
                 if ev.type == "response.output_text.delta":
-                    yield ev.delta
+                    yield json.dumps({"type": "response", "text": event.delta})
                     logger.info(ev.delta)
                     print(ev.delta, end="", flush=True)
                 # if there is no text, print a newline
