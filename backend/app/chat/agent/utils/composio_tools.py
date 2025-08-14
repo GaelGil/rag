@@ -14,7 +14,6 @@ composio_tools = [
             "required": ["query"],
             "additionalProperties": False,
         },
-        "strict": True,
     },
     {
         "type": "function",
@@ -31,7 +30,6 @@ composio_tools = [
             "required": ["query"],
             "additionalProperties": False,
         },
-        "strict": True,
     },
     {
         "type": "function",
@@ -48,7 +46,6 @@ composio_tools = [
             "required": ["query"],
             "additionalProperties": False,
         },
-        "strict": True,
     },
     {
         "type": "function",
@@ -65,6 +62,5 @@ composio_tools = [
             "required": ["query"],
             "additionalProperties": False,
         },
-        "strict": True,
     },
 ]

@@ -88,7 +88,6 @@ class ChatService:
     def process_message(self, message):
         self.add_chat_history(role="user", message=message)
         logger.info(f"process_message called with message: {message}")
-        logger.info(f"TOOLS: {self.tools}")
         stream = self.llm.responses.create(
             model=self.model_name,
             input=self.chat_history,
@@ -115,28 +114,13 @@ class ChatService:
                 print()
 
             # else if there is a tool call
+            # name of the tool is in response.output.item
             elif event.type == "response.output_item.added":
                 # output_index is the index of the tool call
                 # because they come in chunks we need to keep track of the index
                 idx = getattr(event, "output_index", 0)
-                # if the index is not in the tool calls dict, add it
-                tool_calls[idx] = {
-                    "name_fragments": [],
-                    "name": None,
-                    "arguments_fragments": [],
-                    "arguments": None,
-                    "done": False,
-                }
-                logger.info(f"[DEBUG] Added tool call slot idx={idx}")
-
-            # else if there is a tool name
-            elif event.type in (
-                "response.function_call.delta",
-                "response.tool_call.delta",
-            ):
-                # output_index is the index of the tool call
-                idx = getattr(event, "output_index", 0)
-                if idx not in tool_calls:  # if not in the tool calls dict, add it
+                if idx not in tool_calls:
+                    # if the index is not in the tool calls dict, add it
                     tool_calls[idx] = {
                         "name_fragments": [],
                         "name": None,
@@ -144,13 +128,31 @@ class ChatService:
                         "arguments": None,
                         "done": False,
                     }
-                delta = getattr(event, "delta", None)
-                # If dict with "name", append it
-                if isinstance(delta, dict) and "name" in delta:
-                    tool_calls[idx]["name_fragments"].append(delta["name"])
-                # If string, append as-is
-                elif isinstance(delta, str):
-                    tool_calls[idx]["name_fragments"].append(delta)
+                    logger.info(f"[DEBUG] Added tool call slot idx={idx}")
+                tool_calls[idx]["name"] = event.item.name
+
+            # # else if there is a tool name
+            # elif event.type in (
+            #     "response.function_call.delta",
+            #     "response.tool_call.delta",
+            # ):
+            #     # output_index is the index of the tool call
+            #     idx = getattr(event, "output_index", 0)
+            #     if idx not in tool_calls:  # if not in the tool calls dict, add it
+            #         tool_calls[idx] = {
+            #             "name_fragments": [],
+            #             "name": None,
+            #             "arguments_fragments": [],
+            #             "arguments": None,
+            #             "done": False,
+            #         }
+            #     delta = getattr(event, "delta", None)
+            #     # If dict with "name", append it
+            #     if isinstance(delta, dict) and "name" in delta:
+            #         tool_calls[idx]["name_fragments"].append(delta["name"])
+            #     # If string, append as-is
+            #     elif isinstance(delta, str):
+            #         tool_calls[idx]["name_fragments"].append(delta)
 
             # else if there is a tool argument (they come in chunks as strings)
             elif event.type == "response.function_call_arguments.delta":
@@ -188,13 +190,15 @@ class ChatService:
                     }
                 # mark the tool call as done
                 tool_calls[idx]["done"] = True
-                tool_calls[idx]["name"] = "".join(
-                    tool_calls[idx].get("name_fragments", [])
-                ).strip()
+                # tool_calls[idx]["name"] = "".join(
+                #     tool_calls[idx].get("name_fragments", [])
+                # ).strip()
                 tool_calls[idx]["arguments"] = "".join(
                     tool_calls[idx]["arguments_fragments"]
                 ).strip()
                 logger.info(f"[DEBUG] Marked tool idx={idx} done")
+
+        print(f"TOOL CALLS: {tool_calls}")
 
         # Execute the tool calls
         for tool_idx, tool in tool_calls.items():
