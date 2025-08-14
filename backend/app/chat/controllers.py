@@ -11,11 +11,9 @@ chat_service.init_chat_services()
 def generate_response(message):
     try:
         for chunk in chat_service.process_message(message):
-            print(f"Yielding chunk: {chunk}")  # DEBUG
             yield f"data: {chunk}\n\n"
             sys.stdout.flush()  # 🔹 flush after each yield
     except Exception as e:
-        print(f"Exception in generate_response: {e}")
         yield f"data: [Error] {str(e)}\n\n"
 
 
