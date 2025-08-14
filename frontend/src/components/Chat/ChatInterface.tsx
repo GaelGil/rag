@@ -77,31 +77,32 @@ const ChatInterface = () => {
 
               const last = { ...newMessages[lastIndex] }; // make a copy of the last message
               last.content = accumulatedMessage; // update content
-              last.timestamp = new Date(); // force re-render
+              last.timestamp = new Date(); // add timestamp
               // on first chunk, stop showing the "Thinking..." spinner and display content
               if (!firstChunkReceived) {
                 last.isLoading = false;
                 firstChunkReceived = true;
               }
 
-              newMessages[lastIndex] = last;
+              newMessages[lastIndex] = last; // add updated last message
               return newMessages;
             });
           },
+          // on error
           onerror(err) {
             console.error("SSE error:", err);
             // mark last message as not loading and append error text
             setMessages((prev) => {
-              if (prev.length === 0) return prev;
-              const newMessages = [...prev];
-              const lastIndex = newMessages.length - 1;
-              const last = { ...newMessages[lastIndex] };
-              last.isLoading = false;
+              if (prev.length === 0) return prev; // return if error
+              const newMessages = [...prev]; // create new array with previous messages
+              const lastIndex = newMessages.length - 1; // get index of last message
+              const last = { ...newMessages[lastIndex] }; // make a copy of the last message
+              last.isLoading = false; // mark as not loading
               last.content =
-                (last.content || "") + `\n\n[Error receiving stream]`;
-              last.timestamp = new Date();
-              newMessages[lastIndex] = last;
-              return newMessages;
+                (last.content || "") + `\n\n[Error receiving stream]`; // append error
+              last.timestamp = new Date(); // add timestamp
+              newMessages[lastIndex] = last; // add updated last message
+              return newMessages; // return new messages
             });
             setIsLoading(false);
             // rethrow to let fetchEventSource handle closure
@@ -110,17 +111,17 @@ const ChatInterface = () => {
           onclose() {
             // streaming finished: ensure assistant message is marked not loading and final content is saved
             setMessages((prev) => {
-              if (prev.length === 0) return prev;
-              const newMessages = [...prev];
-              const lastIndex = newMessages.length - 1;
-              const last = { ...newMessages[lastIndex] };
-              last.isLoading = false;
-              last.content = accumulatedMessage;
-              last.timestamp = new Date();
-              newMessages[lastIndex] = last;
+              if (prev.length === 0) return prev; // return if no messages
+              const newMessages = [...prev]; // create new array with previous messages
+              const lastIndex = newMessages.length - 1; // get index of last message
+              const last = { ...newMessages[lastIndex] }; // make a copy of the last message
+              last.isLoading = false; // mark as not loading
+              last.content = accumulatedMessage; // update content
+              last.timestamp = new Date(); // add timestamp
+              newMessages[lastIndex] = last; // add updated last message
               return newMessages;
             });
-            setIsLoading(false);
+            setIsLoading(false); // set loading state
             console.log("SSE connection closed");
           },
         }
