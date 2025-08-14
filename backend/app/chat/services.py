@@ -98,7 +98,7 @@ class ChatService:
 
         tool_calls = {}
 
-        # First pass: collect text + tool calls
+        # initial call
         for event in stream:
             print(
                 f"\n[DEBUG EVENT] type={event.type}, idx={getattr(event, 'output_index', None)}, delta={getattr(event, 'delta', None)}"
@@ -122,7 +122,6 @@ class ChatService:
                 if idx not in tool_calls:
                     # if the index is not in the tool calls dict, add it
                     tool_calls[idx] = {
-                        "name_fragments": [],
                         "name": None,
                         "arguments_fragments": [],
                         "arguments": None,
@@ -137,12 +136,12 @@ class ChatService:
                 idx = getattr(event, "output_index", 0)
                 if idx not in tool_calls:  # if not in the tool calls dict, add it
                     tool_calls[idx] = {
-                        "name_fragments": [],
                         "name": None,
                         "arguments_fragments": [],
                         "arguments": None,
                         "done": False,
-                    }  # delta (arguments) may be a string fragment so we add it
+                    }
+                # delta (arguments) may be a string fragment so we add it
                 args_frag = (
                     event.delta
                     if isinstance(event.delta, str)
@@ -159,7 +158,6 @@ class ChatService:
                 # if the index is not in the tool calls dict, add it
                 if idx not in tool_calls:
                     tool_calls[idx] = {
-                        "name_fragments": [],
                         "name": None,
                         "arguments_fragments": [],
                         "arguments": None,
@@ -198,6 +196,7 @@ class ChatService:
             # yield {'type': 'tool_use', 'tool_name': tool_name, 'tool_input': parsed_args}
             # yield {'type': 'tool_result', 'tool_name': tool_name, 'tool_input': parsed_args, 'tool_result': result}
             # yield {'type': 'response', 'text': event.delta} for both final and initial response
+            # maybe not for reponse since we want to load the chunks as they are comming
             tool_use = {
                 "type": "tool_use",
                 "tool_name": tool_name,
