@@ -66,9 +66,9 @@ const ChatInterface = () => {
             console.log("Parsed chunk:", JSON.parse(ev.data));
             accumulatedMessage += ev.data; // append chunk to accumulated message
 
-            // Update assistant message content and on first chunk remove its isLoading flag
+            //
             setMessages((prev) => {
-              if (prev.length === 0) return prev;
+              if (prev.length === 0) return prev; //
               const newMessages = [...prev]; // create new array with previous messages
               const lastIndex = newMessages.length - 1; // get index of last message
 
