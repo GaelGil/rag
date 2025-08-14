@@ -37,6 +37,7 @@ const ChatInterface = () => {
     };
     // add user and assistant messages to messages state
     setMessages((prev) => [...prev, userMessage, assistantMessage]);
+    // set loading state
     setIsLoading(true);
 
     let accumulatedMessage = "";
