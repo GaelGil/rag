@@ -54,7 +54,6 @@ const ChatInterface = () => {
     setIsLoading(true);
 
     let accumulatedMessage = "";
-    // let firstChunkReceived = false;
 
     try {
       // fetch event source
