@@ -194,6 +194,10 @@ class ChatService:
                     f"[DEBUG] Failed to parse args for idx={tool_idx}, using empty dict"
                 )
 
+            # TODO: update yields to do
+            # yield {'type': 'tool_use', 'tool_name': tool_name, 'tool_input': parsed_args}
+            # yield {'type': 'tool_result', 'tool_name': tool_name, 'tool_input': parsed_args, 'tool_result': result}
+            # yield {'type': 'response', 'text': event.delta} for both final and initial response
             tool_use = {
                 "type": "tool_use",
                 "tool_name": tool_name,
