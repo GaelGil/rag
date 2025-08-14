@@ -129,30 +129,7 @@ class ChatService:
                         "done": False,
                     }
                     logger.info(f"[DEBUG] Added tool call slot idx={idx}")
-                tool_calls[idx]["name"] = event.item.name
-
-            # # else if there is a tool name
-            # elif event.type in (
-            #     "response.function_call.delta",
-            #     "response.tool_call.delta",
-            # ):
-            #     # output_index is the index of the tool call
-            #     idx = getattr(event, "output_index", 0)
-            #     if idx not in tool_calls:  # if not in the tool calls dict, add it
-            #         tool_calls[idx] = {
-            #             "name_fragments": [],
-            #             "name": None,
-            #             "arguments_fragments": [],
-            #             "arguments": None,
-            #             "done": False,
-            #         }
-            #     delta = getattr(event, "delta", None)
-            #     # If dict with "name", append it
-            #     if isinstance(delta, dict) and "name" in delta:
-            #         tool_calls[idx]["name_fragments"].append(delta["name"])
-            #     # If string, append as-is
-            #     elif isinstance(delta, str):
-            #         tool_calls[idx]["name_fragments"].append(delta)
+                tool_calls[idx]["name"] = event.item.name  # get the name of the tool
 
             # else if there is a tool argument (they come in chunks as strings)
             elif event.type == "response.function_call_arguments.delta":
@@ -190,15 +167,14 @@ class ChatService:
                     }
                 # mark the tool call as done
                 tool_calls[idx]["done"] = True
-                # tool_calls[idx]["name"] = "".join(
-                #     tool_calls[idx].get("name_fragments", [])
-                # ).strip()
+                # join the argument fragments into a single string
                 tool_calls[idx]["arguments"] = "".join(
                     tool_calls[idx]["arguments_fragments"]
                 ).strip()
+                # log statment for tool done
                 logger.info(f"[DEBUG] Marked tool idx={idx} done")
 
-        print(f"TOOL CALLS: {tool_calls}")
+        logger.info(f"TOOL CALLS: {tool_calls}")
 
         # Execute the tool calls
         for tool_idx, tool in tool_calls.items():
@@ -207,7 +183,7 @@ class ChatService:
 
             if not tool_name:  # if tool name is None
                 print(f"[DEBUG] No tool name for idx={tool_idx}, skipping")
-                continue
+                continue  # continue
 
             # try to parse the arguments
             try:

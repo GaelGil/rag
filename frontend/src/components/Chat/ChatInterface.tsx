@@ -35,7 +35,7 @@ const ChatInterface = () => {
       timestamp: new Date(),
       isLoading: true,
     };
-
+    // add user and assistant messages to messages state
     setMessages((prev) => [...prev, userMessage, assistantMessage]);
     setIsLoading(true);
 
@@ -47,7 +47,7 @@ const ChatInterface = () => {
         `${BASE_URL}/api/chat/message?message=${encodeURIComponent(content)}`,
         {
           method: "GET",
-          credentials: "include", // send cookies/session for auth
+          credentials: "include",
           onopen: async (res) => {
             if (res.ok && res.status === 200) {
               console.log("SSE connection opened");
@@ -132,11 +132,10 @@ const ChatInterface = () => {
           {messages.length === 0 && (
             <div className="text-center py-16">
               <h2 className="text-2xl font-semibold text-gray-900 mb-3">
-                Your Personal Essay Writing Assistant
+                I am your personal AI assitant
               </h2>
               <p className="text-gray-600 mb-2 max-w-md mx-auto">
-                I can help you write an essay on any topic or review an existing
-                essay.
+                Ask Anything
               </p>
             </div>
           )}
