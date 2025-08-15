@@ -81,24 +81,28 @@ const ChatInterface = () => {
     });
   };
 
-  // Append a tool block (tool_use / tool_result) and keep it persistent
+  // Append a tool block (tool_use / tool_result)
   const appendToolBlock = (block: ChatBlock) => {
     setMessages((prev) => {
-      if (prev.length === 0) return prev;
-      const newMessages = [...prev];
-      const lastIndex = newMessages.length - 1;
-      const last = { ...newMessages[lastIndex] };
+      if (prev.length === 0) return prev; // no messages
+      const newMessages = [...prev]; // make a copy of messages array
+      const lastIndex = newMessages.length - 1; // get the index of the last message
+      const last = { ...newMessages[lastIndex] }; // make a copy of the last message
 
+      //
       if (!last.response) {
         last.response = { blocks: [] };
       }
-
+      // append tool block
       const blocks = Array.isArray(last.response.blocks)
         ? [...last.response.blocks, block]
         : [block];
 
+      // update last message
       last.response = { ...last.response, blocks };
+      // mark timestamp as now
       last.timestamp = new Date();
+      // add new message with the last index
       newMessages[lastIndex] = last;
       return newMessages;
     });
@@ -169,7 +173,9 @@ const ChatInterface = () => {
       response: { blocks: [] },
     };
 
+    // user and assistant messages are appended to the end of all previous messages
     setMessages((prev) => [...prev, userMessage, assistantMessage]);
+    // set loading to true
     setIsLoading(true);
 
     // accumulated text chunks come from SSE events; we append to the latest text block
@@ -179,34 +185,39 @@ const ChatInterface = () => {
         {
           method: "GET",
           credentials: "include",
+          // open event is called when the SSE connection is established
           onopen: async (res) => {
+            // if the response is not ok or status is not 200, throw an error
             if (!(res.ok && res.status === 200)) {
               const text = await res.text();
               throw new Error(`SSE failed with status ${res.status}: ${text}`);
             }
           },
+          // when we recive a message event from the server
           onmessage(ev) {
             try {
+              // try to parse the event data
               const parsed = JSON.parse(ev.data);
+              // if the parsed data is not an object, return
               if (!parsed || typeof parsed !== "object") return;
-
+              // switch on the type of the parsed data
               switch (parsed.type) {
-                case "init_response":
-                  // first / streaming chunks (append)
-                  upsertTextBlock(parsed.content ?? "", false);
+                case "init_response": // if it's an init_response
+                  // append to the latest text block
+                  upsertTextBlock(parsed.text ?? "", false);
                   break;
-                case "final_response":
+                case "final_response": // if it's a final_response
                   // final chunk: append then mark final
-                  upsertTextBlock(parsed.content ?? "", true);
+                  upsertTextBlock(parsed.text ?? "", true);
                   break;
-                case "tool_use":
+                case "tool_use": // if it's a tool_use
                   appendToolBlock({
                     type: "tool_use",
                     tool_name: parsed.tool_name,
                     tool_input: parsed.tool_input,
                   });
                   break;
-                case "tool_result":
+                case "tool_result": // if it's a tool_result
                   appendToolBlock({
                     type: "tool_result",
                     tool_name: parsed.tool_name,
@@ -214,10 +225,11 @@ const ChatInterface = () => {
                     tool_result: parsed.tool_result,
                   });
                   break;
-                default:
+                default: // if it's anything else log a warning of an unknown type
                   console.warn("Unknown SSE chunk type:", parsed.type);
               }
             } catch (err) {
+              // if there's an error
               console.error("Invalid SSE chunk:", ev.data, err);
             }
           },
@@ -239,6 +251,7 @@ const ChatInterface = () => {
             throw err;
           },
           onclose() {
+            // if the connection is closed
             // make sure any streaming text is finalized
             finalizeTextBlocks();
             setIsLoading(false);
