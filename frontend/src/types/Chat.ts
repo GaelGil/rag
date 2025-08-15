@@ -4,13 +4,11 @@ export interface ChatInputProps {
 }
 
 export interface ChatBlock {
-  type: "thinking" | "redacted_thinking" | "text" | "tool_use" | "tool_result";
+  type: "init_response" | "final_response" | "tool_use" | "tool_result";
   content?: string;
   tool_name?: string;
   tool_input?: any;
   tool_result?: any;
-  tool_id?: string;
-  iteration?: number;
 }
 
 export interface ChatResponse {
@@ -32,16 +30,9 @@ export interface ChatMessageProps {
   message: Message;
 }
 
-export interface ThinkingBlockProps {
-  content: string;
-  isRedacted?: boolean;
-  iteration?: number;
-}
-
 export interface ToolBlockProps {
-  type: "use" | "result";
+  type: "tool_use" | "tool_result";
   toolName: string;
   toolInput?: any;
   toolResult?: any;
-  iteration?: number;
 }
