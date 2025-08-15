@@ -200,13 +200,6 @@ class ChatService:
             except TypeError:
                 result = self.execute_tool(tool_name, parsed_args.get("location"))
 
-            # tool_result_data = {
-            #     "type": "tool_result",
-            #     "tool_name": tool_name,
-            #     "tool_input": parsed_args,
-            #     "tool_result": result,
-            # }
-
             yield json.dumps(
                 {
                     "type": "tool_result",
