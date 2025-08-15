@@ -238,6 +238,7 @@ const ChatInterface = () => {
           },
           onerror(err) {
             console.error("SSE error", err);
+            // update the messages to display the error
             setMessages((prev) => {
               if (prev.length === 0) return prev;
               const newMessages = [...prev];
