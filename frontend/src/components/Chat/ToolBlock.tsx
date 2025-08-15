@@ -56,11 +56,11 @@ const ToolBlock = ({
                 <div className="bg-white rounded border p-2 text-blue-700 font-mono text-xs">
                   {JSON.stringify(toolInput, null, 2)}
                 </div>
+                <div className="bg-white rounded border p-2 text-green-800 font-mono text-xs">
+                  {JSON.stringify(toolResult, null, 2)}
+                </div>
               </div>
             )}
-            <div className="bg-white rounded border p-2 text-green-800 font-mono text-xs">
-              {JSON.stringify(toolResult, null, 2)}
-            </div>
           </div>
         )}
       </div>
