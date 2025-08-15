@@ -13,8 +13,6 @@ export interface ChatBlock {
 
 export interface ChatResponse {
   blocks: ChatBlock[];
-  stop_reason: string;
-  total_iterations: number;
 }
 
 export interface Message {

@@ -19,8 +19,6 @@ const ChatInterface = () => {
     scrollToBottom();
   }, [messages]);
 
-  // --- Helpers to manage blocks using your existing ChatBlock types ---
-
   // Append or upsert a streaming text block (uses type init_response while streaming;
   // when isFinal=true we either convert that block to final_response or insert final_response)
   const upsertTextBlock = (text: string, isFinal = false) => {
@@ -31,7 +29,7 @@ const ChatInterface = () => {
       const last = { ...newMessages[lastIndex] };
 
       if (!last.response) {
-        last.response = { blocks: [], stop_reason: "", total_iterations: 0 };
+        last.response = { blocks: [] };
       }
       const blocks = Array.isArray(last.response.blocks)
         ? [...last.response.blocks]
@@ -92,7 +90,7 @@ const ChatInterface = () => {
       const last = { ...newMessages[lastIndex] };
 
       if (!last.response) {
-        last.response = { blocks: [], stop_reason: "", total_iterations: 0 };
+        last.response = { blocks: [] };
       }
 
       const blocks = Array.isArray(last.response.blocks)
@@ -150,8 +148,10 @@ const ChatInterface = () => {
 
   // --- sendMessage with SSE ---
   const sendMessage = async (content: string) => {
+    // check for empty message and if empty message return
     if (!content.trim() || isLoading) return;
 
+    // create user message
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
@@ -159,13 +159,14 @@ const ChatInterface = () => {
       timestamp: new Date(),
     };
 
+    // create assistant message
     const assistantMessage: Message = {
       id: (Date.now() + 1).toString(),
       role: "assistant",
       content: "",
       timestamp: new Date(),
       isLoading: true,
-      response: { blocks: [], stop_reason: "", total_iterations: 0 },
+      response: { blocks: [] },
     };
 
     setMessages((prev) => [...prev, userMessage, assistantMessage]);
