@@ -22,11 +22,13 @@ const ChatInterface = () => {
   // Append or upsert a streaming text block (uses type init_response while streaming;
   // when isFinal=true we either convert that block to final_response or insert final_response)
   const upsertTextBlock = (text: string, isFinal = false) => {
+    // update messages
+    // get current messages state
     setMessages((prev) => {
-      if (prev.length === 0) return prev;
-      const newMessages = [...prev];
-      const lastIndex = newMessages.length - 1;
-      const last = { ...newMessages[lastIndex] };
+      if (prev.length === 0) return prev; // if messages array is empty return state
+      const newMessages = [...prev]; // make a copy of the messages array
+      const lastIndex = newMessages.length - 1; // get the last index
+      const last = { ...newMessages[lastIndex] }; // make a copy of the last message
 
       if (!last.response) {
         last.response = { blocks: [] };
@@ -152,15 +154,15 @@ const ChatInterface = () => {
   };
 
   // --- sendMessage with SSE ---
-  const sendMessage = async (content: string) => {
+  const sendMessage = async (message: string) => {
     // check for empty message and if empty message return
-    if (!content.trim() || isLoading) return;
+    if (!message.trim() || isLoading) return;
 
     // create user message
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
-      content: content.trim(),
+      content: message.trim(),
       timestamp: new Date(),
     };
 
@@ -182,7 +184,7 @@ const ChatInterface = () => {
     // accumulated text chunks come from SSE events; we append to the latest text block
     try {
       await fetchEventSource(
-        `${BASE_URL}/api/chat/message?message=${encodeURIComponent(content)}`,
+        `${BASE_URL}/api/chat/message?message=${encodeURIComponent(message)}`,
         {
           method: "GET",
           credentials: "include",
