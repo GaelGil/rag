@@ -1,10 +1,10 @@
 services:
   db:
-    image: ankane/pgvector:pg15 # for pgvector support
+    image: pgvector/pgvector:pg17 # for pgvector support
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: projectdb
+      POSTGRES_DB: ragdb
     ports:
       - "5432:5432"
     volumes:

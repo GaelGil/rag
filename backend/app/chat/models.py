@@ -1,8 +1,7 @@
-from sqlalchemy import Column, Integer, String
-from sqlalchemy.orm import declarative_base
 from sqlalchemy.types import UserDefinedType
 
-Base = declarative_base()
+
+from app.extensions import db
 
 
 # Define pgvector type
@@ -11,9 +10,9 @@ class Vector(UserDefinedType):
         return "vector(1536)"  # change depending on vector dimension size
 
 
-class Document(Base):
+class Document(db.Model):
     __tablename__ = "documents"
 
-    id = Column(Integer, primary_key=True)
-    content = Column(String, nullable=False)
-    embedding = Column(Vector)  # pgvector column
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.String, nullable=False)
+    embedding = db.Column(Vector)  # pgvector column
