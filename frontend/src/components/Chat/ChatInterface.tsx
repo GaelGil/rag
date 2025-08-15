@@ -83,8 +83,9 @@ const ChatInterface = () => {
 
   // Append a tool block (tool_use / tool_result)
   const appendToolBlock = (block: ChatBlock) => {
+    // update messages (prev is current state of messages array)
     setMessages((prev) => {
-      if (prev.length === 0) return prev; // no messages
+      if (prev.length === 0) return prev; // if empty array
       const newMessages = [...prev]; // make a copy of messages array
       const lastIndex = newMessages.length - 1; // get the index of the last message
       const last = { ...newMessages[lastIndex] }; // make a copy of the last message
@@ -104,7 +105,7 @@ const ChatInterface = () => {
       last.timestamp = new Date();
       // add new message with the last index
       newMessages[lastIndex] = last;
-      return newMessages;
+      return newMessages; // return updated messages to callback function
     });
   };
 
