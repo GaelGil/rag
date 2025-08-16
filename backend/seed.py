@@ -8,6 +8,7 @@ with app.app_context():
     # Check if users exists
     alice_exists = User.query.filter_by(username="alice").first()
     bob_exists = User.query.filter_by(username="bob").first()
+    admin_exists = User.query.filter_by(username="admin").first()
     charlie_exits = User.query.filter_by(username="charlie").first()
     new_user_exists = User.query.filter_by(username="new").first()
     another_user_exists = User.query.filter_by(username="another").first()
@@ -16,6 +17,7 @@ with app.app_context():
     # add users if they dont exist
     if (
         not alice_exists
+        and not admin_exists
         and not bob_exists
         and not charlie_exits
         and not another_user_exists
@@ -24,6 +26,11 @@ with app.app_context():
         alice = User(
             username="alice",
             email="alice@example.com",
+            password=bcrypt.generate_password_hash("password").decode("utf-8"),
+        )
+        admin = User(
+            username="admin",
+            email="admin@admin.com",
             password=bcrypt.generate_password_hash("password").decode("utf-8"),
         )
         bob = User(
@@ -52,7 +59,9 @@ with app.app_context():
             password=bcrypt.generate_password_hash("password").decode("utf-8"),
         )
 
-        db.session.add_all([alice, bob, charlie, new_user, another_user, user_one])
+        db.session.add_all(
+            [alice, admin, bob, charlie, new_user, another_user, user_one]
+        )
         db.session.commit()
 
     print("Seed data added!")
