@@ -51,14 +51,14 @@ def recommend(query: str, top_k: int = 3):
     query_vector = get_embedding(query)
 
     sql = text("""
-        SELECT id, content
-        FROM documents
+        SELECT id, title
+        FROM movies
         ORDER BY embedding <-> :query_vector
         LIMIT :top_k
     """)
 
     result = db.session.execute(sql, {"query_vector": query_vector, "top_k": top_k})
-    return [{"id": r.id, "content": r.content} for r in result]
+    return [{"id": r.id, "movie": r.title} for r in result]
 
 
 class ChatService:
