@@ -9,6 +9,8 @@ import os
 import json
 import logging
 import traceback
+from sqlalchemy import text
+from app.extensions import db
 
 # logging stuff
 logging.basicConfig(
@@ -17,6 +19,36 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 # load env
 load_dotenv(Path("../../.env"))
+client = OpenAIClient(api_key=os.getenv("OPENAI_API_KEY")).get_client()
+
+
+def recommend(query: str, top_k: int = 3):
+    # Generate embedding for user's preference or query
+    query_vector = get_embedding(query)
+
+    sql = text("""
+        SELECT id, content
+        FROM documents
+        ORDER BY embedding <-> :query_vector
+        LIMIT :top_k
+    """)
+
+    result = db.session.execute(sql, {"query_vector": query_vector, "top_k": top_k})
+    return [{"id": r.id, "content": r.content} for r in result]
+
+
+def get_embedding(text: str) -> list[float]:
+    """Get the embedding of a text
+
+    args:
+        text (str): The text to get the embedding of
+
+    returns:
+        list[float]: The embedding of the text
+
+    """
+    response = client.embeddings.create(model="text-embedding-3-small", input=text)
+    return response.data[0].embedding
 
 
 class ChatService:
