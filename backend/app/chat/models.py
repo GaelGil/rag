@@ -10,9 +10,9 @@ class Vector(UserDefinedType):
         return "vector(1536)"  # change depending on vector dimension size
 
 
-class Document(db.Model):
-    __tablename__ = "documents"
+class Movie(db.Model):
+    __tablename__ = "movies"
 
     id = db.Column(db.Integer, primary_key=True)
-    content = db.Column(db.String, nullable=False)
+    title = db.Column(db.String, nullable=False)
     embedding = db.Column(Vector)  # pgvector column
