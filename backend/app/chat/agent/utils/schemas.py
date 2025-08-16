@@ -2,6 +2,8 @@ from typing import List, Optional, Dict, Literal
 from pydantic import BaseModel
 
 
+class SearchResults(BaseModel):
+
 class PriceMovement(BaseModel):
     movement: Optional[Literal["Up", "Down", "Neutral"]]
     percentage: Optional[float]
