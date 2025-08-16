@@ -83,7 +83,7 @@ class ChatService:
         """
         self.chat_history.append({"role": role, "content": message})
 
-    def execute_tool(self, tool_name, tool_args):
+    def execute_tool(self, tool_name: str, tool_args: dict):
         """Execute a tool
 
         Args:
@@ -98,6 +98,9 @@ class ChatService:
         logger.info(
             f"Tool Name Type {type(tool_name)}, Tool Args Type {type(tool_args)}"
         )
+        if tool_name == "vector_movie_search":
+            return recommend(tool_args["query"], tool_args["top_k"])
+
         try:
             print(f"User ID: {self.user_id}")
             composio = Composio()
@@ -118,8 +121,20 @@ class ChatService:
             return {"error": error_msg}
 
     def process_message(self, message):
+        """Processes a message
+
+        Args:
+            message (str): The message to process
+
+        Returns:
+            None
+
+        """
+        # add user message to chat history
         self.add_chat_history(role="user", message=message)
+        # log the message
         logger.info(f"process_message called with message: {message}")
+        # stream the response
         stream = self.llm.responses.create(
             model=self.model_name,
             input=self.chat_history,
@@ -128,6 +143,7 @@ class ChatService:
             stream=True,
         )
 
+        # keep track of tool calls
         tool_calls = {}
 
         # initial call
@@ -138,6 +154,7 @@ class ChatService:
 
             # if there is text, print it
             if event.type == "response.output_text.delta":
+                # yield the text
                 yield json.dumps({"type": "init_response", "text": event.delta})
                 logger.info(f"response.output_text.delta: {event.delta}")
                 print(event.delta, end="", flush=True)
@@ -223,7 +240,7 @@ class ChatService:
                 logger.info(
                     f"[DEBUG] Failed to parse args for idx={tool_idx}, using empty dict"
                 )
-
+            # yield the tool call
             yield json.dumps(
                 {"type": "tool_use", "tool_name": tool_name, "tool_input": parsed_args}
             )
@@ -231,7 +248,7 @@ class ChatService:
                 result = self.execute_tool(tool_name, parsed_args)
             except TypeError:
                 result = self.execute_tool(tool_name, parsed_args.get("location"))
-
+            # yield the tool result
             yield json.dumps(
                 {
                     "type": "tool_result",
@@ -242,6 +259,7 @@ class ChatService:
             )
             logger.info(f"[DEBUG] Tool result for idx={tool_idx}: {result}")
 
+            # Add the tool call result to the chat history
             self.chat_history.append(
                 {
                     "role": "assistant",
@@ -250,7 +268,8 @@ class ChatService:
             )
 
         # Get the final answer
-        if tool_calls:  # if we called tools to get updated information
+        # IF we called tools to get updated information then we must form a final response
+        if tool_calls:
             logger.info("[DEBUG] Calling model for final answer...")
             # Call the model again with the tool call results
             final_stream = self.llm.responses.create(
