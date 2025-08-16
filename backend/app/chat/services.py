@@ -22,21 +22,6 @@ load_dotenv(Path("../../.env"))
 client = OpenAIClient(api_key=os.getenv("OPENAI_API_KEY")).get_client()
 
 
-def recommend(query: str, top_k: int = 3):
-    # Generate embedding for user's preference or query
-    query_vector = get_embedding(query)
-
-    sql = text("""
-        SELECT id, content
-        FROM documents
-        ORDER BY embedding <-> :query_vector
-        LIMIT :top_k
-    """)
-
-    result = db.session.execute(sql, {"query_vector": query_vector, "top_k": top_k})
-    return [{"id": r.id, "content": r.content} for r in result]
-
-
 def get_embedding(text: str) -> list[float]:
     """Get the embedding of a text
 
@@ -49,6 +34,31 @@ def get_embedding(text: str) -> list[float]:
     """
     response = client.embeddings.create(model="text-embedding-3-small", input=text)
     return response.data[0].embedding
+
+
+def recommend(query: str, top_k: int = 3):
+    """
+    Recommend documents based on user's preference or query.
+
+    Args:
+        query (str): The user's preference or query.
+        top_k (int): The number of documents to recommend.
+
+    Returns:
+        list: A list of recommended documents.
+    """
+    # Generate embedding for user's preference or query
+    query_vector = get_embedding(query)
+
+    sql = text("""
+        SELECT id, content
+        FROM documents
+        ORDER BY embedding <-> :query_vector
+        LIMIT :top_k
+    """)
+
+    result = db.session.execute(sql, {"query_vector": query_vector, "top_k": top_k})
+    return [{"id": r.id, "content": r.content} for r in result]
 
 
 class ChatService:
