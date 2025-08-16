@@ -63,4 +63,24 @@ composio_tools = [
             "additionalProperties": False,
         },
     },
+    {
+        "type": "function",
+        "name": "vector_movie_search",
+        "description": "Perform a vector search on a movie embedding database",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The search query for the embedding database.",
+                },
+                "top_k": {
+                    "type": "integer",
+                    "description": "The number of results to return.",
+                },
+            },
+            "required": ["query"],
+            "additionalProperties": False,
+        },
+    },
 ]
