@@ -1,15 +1,16 @@
 from app.chat.agent.utils.schemas import (
-    AIPreviewResult,
+    SearchResults,
+    VectorSearchResults,
+    EventSearchResults,
+    NewsSearchResults,
+    PriceMovement,
+    MarketResult,
+    ComposioSearchResult,
+    UnifiedSearchResponse,
     ForumAnswer,
     ForumResult,
-    MarketResult,
-    OrganicResult,
-    SearchResults,
-    UnifiedSearchResponse,
-    PriceMovement,
-    VectorSearchResults,
 )
-
+import traceback
 from typing import Optional
 
 
@@ -22,19 +23,18 @@ from typing import Optional
 def parse_composio_search_results(composio_result: dict) -> dict:
     """Parse COMPOSIO_SEARCH_SEARCH results into UnifiedSearchResponse format."""
     try:
-        # Get the search data from the result that is in the 'data' key and the 'results' key
         search_data = composio_result.get("data", {}).get("results", {})
 
         # Parse AI Overview
         ai_overview = None
         if search_data.get("ai_overview"):
-            ai_overview = AIPreviewResult()
+            ai_overview = search_data.get("ai_overview")
 
         # Parse Organic Results
         organic_results = []
         organic_data = search_data.get("organic_results", [])
         for result in organic_data:
-            organic_result = OrganicResult(
+            composio_result = ComposioSearchResult(
                 title=result.get("title"),
                 link=result.get("link"),
                 displayed_link=result.get("displayed_link"),
@@ -45,7 +45,7 @@ def parse_composio_search_results(composio_result: dict) -> dict:
                 position=result.get("position"),
                 redirect_link=result.get("redirect_link"),
             )
-            organic_results.append(organic_result)
+            organic_results.append(composio_result)
 
         # Parse Discussions and Forums
         forums = []
@@ -91,6 +91,7 @@ def parse_composio_search_results(composio_result: dict) -> dict:
 
 def parse_composio_finance_search_results(composio_result: dict) -> dict:
     """Parse COMPOSIO_SEARCH_FINANCE_SEARCH results into UnifiedSearchResponse format."""
+
     try:
         search_data = composio_result.get("data", {}).get("results", {})
 
@@ -201,8 +202,6 @@ def parse_composio_finance_search_results(composio_result: dict) -> dict:
         return unified_response.model_dump()
 
     except Exception as e:
-        import traceback
-
         print(traceback.format_exc())
         return {"error": f"Failed to parse COMPOSIO finance search results: {str(e)}"}
 
@@ -213,10 +212,10 @@ def parse_composio_news_search_results(composio_result: dict) -> dict:
         search_data = composio_result.get("data", {}).get("results", {})
 
         # Parse News Results as Organic Results
-        organic_results = []
+        news_search_results = SearchResults()
         news_data = search_data.get("news_results", [])
         for news_item in news_data:
-            organic_result = OrganicResult(
+            result = NewsSearchResults(
                 title=news_item.get("title"),
                 date=news_item.get("date"),
                 snippet=news_item.get("snippet"),
@@ -225,22 +224,11 @@ def parse_composio_news_search_results(composio_result: dict) -> dict:
                 favicon=news_item.get("favicon"),
                 position=news_item.get("position"),
             )
-            organic_results.append(organic_result)
+            news_search_results.results.append(result)
 
-        # Build the unified response (news search typically doesn't have AI overview, forums, or markets)
-        search_results = SearchResults(
-            ai_overview=None,
-            organic_results=organic_results if organic_results else None,
-            discussions_and_forums=None,
-            markets=None,
-        )
-
-        unified_response = UnifiedSearchResponse(search_results=search_results)
-        return unified_response.model_dump()
+        return news_search_results.model_dump()
 
     except Exception as e:
-        import traceback
-
         print(traceback.format_exc())
         return {"error": f"Failed to parse COMPOSIO news search results: {str(e)}"}
 
@@ -250,14 +238,14 @@ def parse_composio_event_search_results(composio_result: dict) -> dict:
 
     Event search results have the same structure as news results, so we reuse the same parsing logic.
     """
+    events_search_results = SearchResults()
     try:
         search_data = composio_result.get("data", {}).get("results", {})
 
         # Parse News Results as Organic Results
-        organic_results = []
         events_data = search_data.get("event_results", [])
         for event_item in events_data:
-            organic_result = OrganicResult(
+            event = EventSearchResults(
                 title=event_item.get("title"),
                 date="".join(event_item.get("date")),
                 address="".join(event_item.get("address")),
@@ -265,29 +253,20 @@ def parse_composio_event_search_results(composio_result: dict) -> dict:
                 image=event_item.get("image"),
                 link=event_item.get("link"),
             )
-            organic_results.append(organic_result)
+            events_search_results.results.append(event)
 
-        # Build the unified response (news search typically doesn't have AI overview, forums, or markets)
-        search_results = SearchResults(
-            ai_overview=None,
-            organic_results=organic_results if organic_results else None,
-        )
-
-        unified_response = UnifiedSearchResponse(search_results=search_results)
-        return unified_response.model_dump()
+        return events_search_results.model_dump()
 
     except Exception as e:
-        import traceback
-
         print(traceback.format_exc())
         return {"error": f"Failed to parse COMPOSIO news search results: {str(e)}"}
 
 
 def parse_vector_search_results(result: list):
     """Parse COMPOSIO_SEARCH_SEARCH results into UnifiedSearchResponse format."""
-
+    vector_search_results = SearchResults()
     for movie_item in result:
         movie = movie_item.get("movie")
-        vector_search_result = VectorSearchResults(title=movie)
+        vector_search_results.results.append(VectorSearchResults(title=movie))
 
-    return vector_search_result
+    return vector_search_results.model_dump()
