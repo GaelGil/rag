@@ -14,12 +14,6 @@ import traceback
 from typing import Optional
 
 
-# def parse_composio_finance_search_results(result):
-#     pass
-# def parse_composio_search_results(result):
-#     pass
-
-
 def parse_composio_search_results(composio_result: dict) -> dict:
     """Parse COMPOSIO_SEARCH_SEARCH results into UnifiedSearchResponse format."""
     try:
