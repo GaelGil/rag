@@ -7,6 +7,7 @@ from app.chat.agent.utils.schemas import (
     SearchResults,
     UnifiedSearchResponse,
     PriceMovement,
+    VectorSearchResults,
 )
 
 from typing import Optional
@@ -14,13 +15,7 @@ from typing import Optional
 
 # def parse_composio_finance_search_results(result):
 #     pass
-# def parse_composio_news_search_results(result):
-#     pass
-# def parse_composio_event_search_results(result):
-#     pass
 # def parse_composio_search_results(result):
-#     pass
-# def parse_vector_search_results(result):
 #     pass
 
 
@@ -223,14 +218,12 @@ def parse_composio_news_search_results(composio_result: dict) -> dict:
         for news_item in news_data:
             organic_result = OrganicResult(
                 title=news_item.get("title"),
-                link=news_item.get("link"),
-                displayed_link=None,  # Not provided in news results
-                snippet=news_item.get("snippet"),
-                source=news_item.get("source"),
                 date=news_item.get("date"),
+                snippet=news_item.get("snippet"),
+                link=news_item.get("link"),
+                source=news_item.get("source"),
                 favicon=news_item.get("favicon"),
                 position=news_item.get("position"),
-                redirect_link=None,
             )
             organic_results.append(organic_result)
 
@@ -288,3 +281,13 @@ def parse_composio_event_search_results(composio_result: dict) -> dict:
 
         print(traceback.format_exc())
         return {"error": f"Failed to parse COMPOSIO news search results: {str(e)}"}
+
+
+def parse_vector_search_results(result: list):
+    """Parse COMPOSIO_SEARCH_SEARCH results into UnifiedSearchResponse format."""
+
+    for movie_item in result:
+        movie = movie_item.get("movie")
+        vector_search_result = VectorSearchResults(title=movie)
+
+    return vector_search_result

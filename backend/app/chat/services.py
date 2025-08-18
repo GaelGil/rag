@@ -6,6 +6,7 @@ from app.chat.agent.utils.formaters import (
     parse_composio_news_search_results,
     parse_composio_finance_search_results,
     parse_composio_search_results,
+    vector_search_results,
 )
 from app.extensions import db
 from pathlib import Path
@@ -118,7 +119,7 @@ class ChatService:
             parsed_result = parse_composio_event_search_results(result)
             print("Used event search parser")
         elif "vector" in tool_name.lower():
-            parsed_result = parse_composio_search_results(result)
+            parsed_result = vector_search_results(result)
             print("Used vector search parser")
         else:
             # Default to general search parser
