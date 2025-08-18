@@ -12,9 +12,22 @@ from app.chat.agent.utils.schemas import (
 from typing import Optional
 
 
+# def parse_composio_finance_search_results(result):
+#     pass
+# def parse_composio_news_search_results(result):
+#     pass
+# def parse_composio_event_search_results(result):
+#     pass
+# def parse_composio_search_results(result):
+#     pass
+# def parse_vector_search_results(result):
+#     pass
+
+
 def parse_composio_search_results(composio_result: dict) -> dict:
     """Parse COMPOSIO_SEARCH_SEARCH results into UnifiedSearchResponse format."""
     try:
+        # Get the search data from the result that is in the 'data' key and the 'results' key
         search_data = composio_result.get("data", {}).get("results", {})
 
         # Parse AI Overview
@@ -245,7 +258,33 @@ def parse_composio_event_search_results(composio_result: dict) -> dict:
     Event search results have the same structure as news results, so we reuse the same parsing logic.
     """
     try:
-        # Event search returns the same structure as news search, so we can reuse the logic
-        return parse_composio_news_search_results(composio_result)
+        search_data = composio_result.get("data", {}).get("results", {})
+
+        # Parse News Results as Organic Results
+        organic_results = []
+        events_data = search_data.get("event_results", [])
+        for event_item in events_data:
+            organic_result = OrganicResult(
+                title=event_item.get("title"),
+                date="".join(event_item.get("date")),
+                address="".join(event_item.get("address")),
+                description=event_item.get("description"),
+                image=event_item.get("image"),
+                link=event_item.get("link"),
+            )
+            organic_results.append(organic_result)
+
+        # Build the unified response (news search typically doesn't have AI overview, forums, or markets)
+        search_results = SearchResults(
+            ai_overview=None,
+            organic_results=organic_results if organic_results else None,
+        )
+
+        unified_response = UnifiedSearchResponse(search_results=search_results)
+        return unified_response.model_dump()
+
     except Exception as e:
-        return {"error": f"Failed to parse COMPOSIO event search results: {str(e)}"}
+        import traceback
+
+        print(traceback.format_exc())
+        return {"error": f"Failed to parse COMPOSIO news search results: {str(e)}"}

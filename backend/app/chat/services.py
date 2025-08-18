@@ -1,6 +1,13 @@
 from app.chat.agent.utils.OpenAIClient import OpenAIClient
 from app.chat.agent.utils.composio_tools import composio_tools
 from app.chat.agent.utils.prompts import CHATBOT_PROMPT
+from app.chat.agent.utils.formaters import (
+    parse_composio_event_search_results,
+    parse_composio_news_search_results,
+    parse_composio_finance_search_results,
+    parse_composio_search_results,
+)
+from app.extensions import db
 from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -10,7 +17,6 @@ import json
 import logging
 import traceback
 from sqlalchemy import text
-from app.extensions import db
 
 # logging stuff
 logging.basicConfig(
@@ -92,6 +98,33 @@ class ChatService:
             None
         """
         self.chat_history.append({"role": role, "content": message})
+
+    def parse_result(self, tool_name: str, result: dict):
+        """Parse the result of a tool call
+
+        Args:
+            result (dict): The result of a tool call
+
+        Returns:
+            dict: The parsed result
+        """
+        if "finance" in tool_name.lower():
+            parsed_result = parse_composio_finance_search_results(result)
+            print("Used finance search parser")
+        elif "news" in tool_name.lower():
+            parsed_result = parse_composio_news_search_results(result)
+            print("Used news search parser")
+        elif "event" in tool_name.lower():
+            parsed_result = parse_composio_event_search_results(result)
+            print("Used event search parser")
+        elif "vector" in tool_name.lower():
+            parsed_result = parse_composio_search_results(result)
+            print("Used vector search parser")
+        else:
+            # Default to general search parser
+            parsed_result = parse_composio_search_results(result)
+            print("Used general search parser")
+        return parsed_result
 
     def execute_tool(self, tool_name: str, tool_args: dict):
         """Execute a tool
@@ -258,22 +291,25 @@ class ChatService:
                 result = self.execute_tool(tool_name, parsed_args)
             except TypeError:
                 result = self.execute_tool(tool_name, parsed_args.get("location"))
+
+            parsed_result = self.parse_result(tool_name, result)
+
             # yield the tool result
             yield json.dumps(
                 {
                     "type": "tool_result",
                     "tool_name": tool_name,
                     "tool_input": parsed_args,
-                    "tool_result": result,
+                    "tool_result": parsed_result,
                 }
             )
-            logger.info(f"[DEBUG] Tool result for idx={tool_idx}: {result}")
+            logger.info(f"[DEBUG] Tool result for idx={tool_idx}: {parsed_result}")
 
             # Add the tool call result to the chat history
             self.chat_history.append(
                 {
                     "role": "assistant",
-                    "content": f"TOOL_NAME: {tool_name}, RESULT: {result}",
+                    "content": f"TOOL_NAME: {tool_name}, RESULT: {parsed_result}",
                 }
             )
 

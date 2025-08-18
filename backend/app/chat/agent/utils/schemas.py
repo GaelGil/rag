@@ -1,24 +1,5 @@
-from typing import List, Optional, Dict, Literal
+from typing import List, Optional, Literal
 from pydantic import BaseModel
-
-
-class SearchResults(BaseModel):
-
-class PriceMovement(BaseModel):
-    movement: Optional[Literal["Up", "Down", "Neutral"]]
-    percentage: Optional[float]
-    value: Optional[float]
-
-
-class MarketResult(BaseModel):
-    type: Literal["market"] = "market"
-    name: Optional[str]
-    link: Optional[str]
-    stock: Optional[str]
-    price: Optional[float]
-    price_movement: Optional[PriceMovement]
-    serpapi_link: Optional[str]
-    region: Optional[str] = None  # for flattened use
 
 
 class OrganicResult(BaseModel):
@@ -58,9 +39,6 @@ class SearchResults(BaseModel):
     ai_overview: Optional[AIPreviewResult]
     organic_results: Optional[List[OrganicResult]]
     discussions_and_forums: Optional[List[ForumResult]]
-    markets: Optional[
-        Dict[str, List[MarketResult]]
-    ]  # e.g., {"asia": [...], "us": [...]}
 
 
 class UnifiedSearchResponse(BaseModel):
