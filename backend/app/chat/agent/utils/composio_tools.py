@@ -66,7 +66,7 @@ composio_tools = [
     {
         "type": "function",
         "name": "vector_movie_search",
-        "description": "Perform a vector search on a movie embedding database",
+        "description": "Search movies in the embedding database. The database contains embeddings of movie descriptions",
         "parameters": {
             "type": "object",
             "properties": {

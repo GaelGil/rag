@@ -53,7 +53,7 @@ def recommend(query: str, top_k: int = 3):
     sql = text("""
         SELECT id, title
         FROM movies
-        ORDER BY embedding <-> :query_vector
+        ORDER BY embedding <-> CAST(:query_vector AS vector)
         LIMIT :top_k
     """)
 
