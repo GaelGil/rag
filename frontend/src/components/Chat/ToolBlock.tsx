@@ -8,15 +8,8 @@ const ToolBlock = ({
 }: ToolBlockProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const getToolIcon = (name: string) => {
-    switch (name) {
-      case "weather":
-        return "🌤️";
-      case "news":
-        return "📰";
-      default:
-        return "🔧";
-    }
+  const getToolIcon = () => {
+    return "🔧";
   };
 
   return (
@@ -25,9 +18,8 @@ const ToolBlock = ({
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center space-x-2">
             <span className="text-xs font-medium text-blue-700 bg-blue-200 px-2 py-1 rounded">
-              {getToolIcon(toolName)}{" "}
-              {type === "tool_use" ? "TOOL USE" : "TOOL RESULT"}:{" "}
-              {toolName.toUpperCase()}
+              {getToolIcon()} {type === "tool_use" ? "TOOL USE" : "TOOL RESULT"}
+              : {toolName.toUpperCase()}
             </span>
           </div>
           <button
