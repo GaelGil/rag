@@ -68,7 +68,7 @@ def parse_composio_news_search_results(composio_result: dict) -> dict:
                 link=news_item.get("link"),
                 source=news_item.get("source"),
                 favicon=news_item.get("favicon"),
-                position=news_item.get("position"),
+                position=str(news_item.get("position")),
             )
             news.append(result)
         news_search_results = SearchResults(results=news)
