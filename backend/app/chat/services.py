@@ -1,7 +1,7 @@
-from app.chat.agent.utils.OpenAIClient import OpenAIClient
-from app.chat.agent.utils.composio_tools import composio_tools
-from app.chat.agent.utils.prompts import CHATBOT_PROMPT
-from app.chat.agent.utils.formaters import (
+from app.chat.utils.OpenAIClient import OpenAIClient
+from app.chat.utils.composio_tools import composio_tools
+from app.chat.utils.prompts import CHATBOT_PROMPT
+from app.chat.utils.formaters import (
     parse_composio_event_search_results,
     parse_composio_news_search_results,
     parse_composio_finance_search_results,

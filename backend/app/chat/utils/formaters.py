@@ -1,4 +1,4 @@
-from app.chat.agent.utils.schemas import (
+from app.chat.utils.schemas import (
     SearchResults,
     VectorSearchResults,
     EventSearchResults,
