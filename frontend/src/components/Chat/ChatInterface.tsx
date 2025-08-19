@@ -204,6 +204,9 @@ const ChatInterface = () => {
               // if the parsed data is not an object, return
               if (!parsed || typeof parsed !== "object") return;
               // switch on the type of the parsed data
+              console.log(parsed);
+              console.log(parsed.type);
+              console.log();
               switch (parsed.type) {
                 case "init_response": // if it's an init_response
                   // append to the latest text block

@@ -49,7 +49,7 @@ composio_tools = [
     },
     {
         "type": "function",
-        "name": "COMPOSIO_SEARCH_SEARCH",
+        "name": "COMPOSIO_SEARCH_SEARCH",  # composio google search
         "description": "Perform a google search using the composio google search api.",
         "parameters": {
             "type": "object",

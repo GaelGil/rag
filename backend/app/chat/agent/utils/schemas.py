@@ -71,10 +71,18 @@ class VectorSearchResults(BaseModel):
     title: str
 
 
+class FinanceSearchResults(BaseModel):
+    extracted_price: str
+    link: str
+    name: str
+    price: str
+    movement: str
+    percentage: str
+    stock: str
+
+
 class SearchResults(BaseModel):
-    results: (
-        List[EventSearchResults] | List[VectorSearchResults] | List[NewsSearchResults]
-    )
+    results: List
 
 
 class UnifiedSearchResponse(BaseModel):

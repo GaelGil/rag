@@ -6,7 +6,7 @@ from app.chat.agent.utils.formaters import (
     parse_composio_news_search_results,
     parse_composio_finance_search_results,
     parse_composio_search_results,
-    vector_search_results,
+    parse_vector_search_results,
 )
 from app.extensions import db
 from pathlib import Path
@@ -55,8 +55,10 @@ def recommend(query: str, top_k: int = 3):
         list: A list of recommended documents.
     """
     # Generate embedding for user's preference or query
+    logger.info(f"[DEBUG] GETTING EMBEDDING FOR QUERY: {query}")
     query_vector = get_embedding(query)
 
+    logger.info("[DEBUG] SEARCHING MOVIES")
     sql = text("""
         SELECT id, title
         FROM movies
@@ -65,6 +67,7 @@ def recommend(query: str, top_k: int = 3):
     """)
 
     result = db.session.execute(sql, {"query_vector": query_vector, "top_k": top_k})
+    logger.info(f"[DEBUG] RESULT: {result}")
     return [{"id": r.id, "movie": r.title} for r in result]
 
 
@@ -119,10 +122,9 @@ class ChatService:
             parsed_result = parse_composio_event_search_results(result)
             print("Used event search parser")
         elif "vector" in tool_name.lower():
-            parsed_result = vector_search_results(result)
+            parsed_result = parse_vector_search_results(result)
             print("Used vector search parser")
         else:
-            # Default to general search parser
             parsed_result = parse_composio_search_results(result)
             print("Used general search parser")
         return parsed_result
@@ -293,7 +295,9 @@ class ChatService:
             except TypeError:
                 result = self.execute_tool(tool_name, parsed_args.get("location"))
 
+            logger.info(f"[DEBUG] Tool result for idx={tool_idx}: {result}")
             parsed_result = self.parse_result(tool_name, result)
+            logger.info(f"[DEBUG] Tool result for idx={tool_idx}: {parsed_result}")
 
             # yield the tool result
             yield json.dumps(
