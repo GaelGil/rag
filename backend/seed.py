@@ -23,7 +23,7 @@ with app.app_context():
         db.session.add_all([admin])
         db.session.commit()
 
-    with os.scandir("./app/chat/agent/utils/embeddings/") as entries:
+    with os.scandir("./app/chat/utils/embeddings/") as entries:
         for entry in entries:  # Iterate over the entries
             if entry.is_file():  # Check if the entry is a file
                 print(entry.path)  # Print the file path

@@ -210,7 +210,10 @@ class ChatService:
 
             # else if there is a tool call
             # name of the tool is in response.output.item
-            elif event.type == "response.output_item.added":
+            elif (
+                event.type == "response.output_item.added"
+                and event.item.type == "function_call"
+            ):
                 # output_index is the index of the tool call
                 # because they come in chunks we need to keep track of the index
                 idx = getattr(event, "output_index", 0)
