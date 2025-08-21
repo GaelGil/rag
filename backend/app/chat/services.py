@@ -72,25 +72,17 @@ def recommend(query: str, top_k: int = 3):
 
 
 class ChatService:
-    def __init__(self):
+    def __init__(self, calendar_service):
+        self.calendar_service = calendar_service
         self.chat_history: list[dict] = []
         self.model_name: str = "gpt-4.1-mini"
-        self.llm: OpenAI = None
         self.tools = composio_tools
         self.composio = Composio()
         self.user_id = "0000-1111-2222"
-
-    def init_chat_services(self):
-        """
-        Initialize the chat services
-        Args:
-            None
-        Returns:
-            None
-        """
-        print("Initializing OpenAI client ...")
-        self.llm = OpenAIClient(api_key=os.getenv("OPENAI_API_KEY")).get_client()
-        self.add_chat_history(role="developer", message=CHATBOT_PROMPT)
+        self.llm: OpenAI = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.tool_history = {}
+        if not self.chat_history:
+            self.add_chat_history(role="developer", message=CHATBOT_PROMPT)
 
     def add_chat_history(self, role: str, message: str):
         """Adds a message to the chat history
@@ -144,10 +136,9 @@ class ChatService:
         logger.info(
             f"Tool Name Type {type(tool_name)}, Tool Args Type {type(tool_args)}"
         )
-        if tool_name == "vector_movie_search":
-            return recommend(tool_args["query"], tool_args["top_k"])
-
         try:
+            if tool_name == "vector_movie_search":
+                return recommend(tool_args["query"], tool_args["top_k"])
             print(f"User ID: {self.user_id}")
             composio = Composio()
             result = composio.tools.execute(
@@ -157,6 +148,7 @@ class ChatService:
             )
             logger.info(f"Raw Composio result: {result}")
             logger.info(f"Composio result type: {type(result)}")
+            self.tool_history[tool_name] = {"args": tool_args, "result": result}
             return result
         except Exception as e:
             error_msg = f"Tool execution failed: {str(e)}"
@@ -164,6 +156,10 @@ class ChatService:
             logger.info(f"Error type: {type(e).__name__}")
             logger.info(f"Error message: {str(e)}")
             logger.info(f"Traceback: {traceback.format_exc()}")
+            self.tool_history[tool_name] = {
+                "args": tool_args,
+                "result": "error",
+            }
             return {"error": error_msg}
 
     def process_message(self, message):
