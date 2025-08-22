@@ -18,8 +18,14 @@ Then you can go to local host and you should be able to chat
 
 # Demo
 
-![Prompt Submitted](./images/prompt.png "The Prompt")
+Searching popular movies
+![](./images/popular_movies_one.png "Initial Result")
 
-![Second to Last Result](./images/second_last_result.png "Second to Last Result")
+![](./images/popular_movies_two.png "Second to Last Result")
 
-![Last Result](./images/last_result.png "Last Result")
+![](./images/popular_movies_three "Last Result")
+
+Recommending Movies
+![](./images/recommend_one.png "Initial Result")
+
+![](./images/recommend_two.png "Second to Last Result")
