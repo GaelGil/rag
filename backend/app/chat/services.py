@@ -100,13 +100,13 @@ class ChatService:
         """
         if "news" in tool_name.lower():
             parsed_result = parse_composio_news_search_results(result)
-            print("Used news search parser")
+            logger.info("Used news search parser")
         elif "movies" in tool_name.lower():
             parsed_result = parse_vector_search_results(result)
-            print("Used vector search parser")
+            logger.info("Used vector search parser")
         else:
             parsed_result = parse_composio_search_results(result)
-            print("Used general search parser")
+            logger.info("Used general search parser")
         return parsed_result
 
     def execute_tool(self, tool_name: str, tool_args: dict):
