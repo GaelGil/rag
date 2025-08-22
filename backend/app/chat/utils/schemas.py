@@ -2,48 +2,6 @@ from typing import List, Optional, Literal
 from pydantic import BaseModel
 
 
-class PriceMovement(BaseModel):
-    movement: Optional[Literal["Up", "Down", "Neutral"]]
-    percentage: Optional[float]
-    value: Optional[float]
-
-
-class MarketResult(BaseModel):
-    type: Literal["market"] = "market"
-    name: Optional[str]
-    link: Optional[str]
-    stock: Optional[str]
-    price: Optional[float]
-    price_movement: Optional[PriceMovement]
-    serpapi_link: Optional[str]
-    region: Optional[str] = None  # for flattened use
-
-
-class EventSearchResults(BaseModel):
-    title: str
-    date: str
-    address: str
-    description: str
-    image: str
-    link: str
-
-
-class ForumAnswer(BaseModel):
-    link: Optional[str]
-    snippet: Optional[str]
-    extensions: Optional[List[str]] = None
-
-
-class ForumResult(BaseModel):
-    type: Literal["forum"] = "forum"
-    title: Optional[str]
-    link: Optional[str]
-    source: Optional[str]
-    date: Optional[str]
-    extensions: List[str]
-    answers: List[ForumAnswer]
-
-
 class ComposioSearchResult(BaseModel):
     type: Literal["organic"] = "organic"
     title: Optional[str]
@@ -69,16 +27,6 @@ class NewsSearchResults(BaseModel):
 
 class VectorSearchResults(BaseModel):
     title: str
-
-
-class FinanceSearchResults(BaseModel):
-    extracted_price: str
-    link: str
-    name: str
-    price: str
-    movement: str
-    percentage: str
-    stock: str
 
 
 class SearchResults(BaseModel):

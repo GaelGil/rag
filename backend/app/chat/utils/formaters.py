@@ -1,9 +1,7 @@
 from app.chat.utils.schemas import (
     SearchResults,
     VectorSearchResults,
-    EventSearchResults,
     NewsSearchResults,
-    FinanceSearchResults,
 )
 import traceback
 from typing import List
@@ -18,35 +16,6 @@ def parse_composio_search_results(composio_result: dict) -> dict:
 
         news_search_results = SearchResults(results=results)
         return news_search_results.model_dump()
-    except Exception as e:
-        print(traceback.format_exc())
-        return {"error": f"Failed to parse COMPOSIO news search results: {str(e)}"}
-
-
-def parse_composio_finance_search_results(composio_result: dict) -> dict:
-    """Parse COMPOSIO_SEARCH_FINANCE_SEARCH results into UnifiedSearchResponse format."""
-    try:
-        search_data = (
-            composio_result.get("data", {}).get("results", {}).get("discover_more", {})
-        )
-
-        # Parse News Results as Organic Results
-        items = search_data[0].get("items", [])
-        results = []
-        for item in items:
-            result = FinanceSearchResults(
-                extracted_price=item.get("title"),
-                link=item.get("link"),
-                name=item.get("name"),
-                price=item.get("price"),
-                movement=item.get("price_movement").get("movement"),
-                percentage=item.get("price_movement").get("percentage"),
-                stock=item.get("title"),
-            )
-            results.append(result)
-        news_search_results = SearchResults(results=results)
-        return news_search_results.model_dump()
-
     except Exception as e:
         print(traceback.format_exc())
         return {"error": f"Failed to parse COMPOSIO news search results: {str(e)}"}
@@ -73,37 +42,6 @@ def parse_composio_news_search_results(composio_result: dict) -> dict:
             news.append(result)
         news_search_results = SearchResults(results=news)
         return news_search_results.model_dump()
-
-    except Exception as e:
-        print(traceback.format_exc())
-        return {"error": f"Failed to parse COMPOSIO news search results: {str(e)}"}
-
-
-def parse_composio_event_search_results(composio_result: dict) -> dict:
-    """Parse COMPOSIO_SEARCH_EVENT_SEARCH results into UnifiedSearchResponse format.
-
-    Event search results have the same structure as news results, so we reuse the same parsing logic.
-    """
-    try:
-        search_data = composio_result.get("data", {}).get("results", {})
-
-        # Parse News Results as Organic Results
-        events_data = search_data.get("events_results", [])
-        events = []
-        for event_item in events_data:
-            event = EventSearchResults(
-                title=event_item.get("title"),
-                date="".join(event_item.get("date")),
-                address="".join(event_item.get("address")),
-                description=event_item.get("description"),
-                image=event_item.get("image"),
-                link=event_item.get("link"),
-            )
-            events.append(event)
-
-        events_search_results = SearchResults(results=events)
-
-        return events_search_results.model_dump()
 
     except Exception as e:
         print(traceback.format_exc())

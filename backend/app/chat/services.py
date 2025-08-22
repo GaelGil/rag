@@ -1,9 +1,7 @@
 from app.chat.utils.composio_tools import composio_tools
 from app.chat.utils.prompts import CHATBOT_PROMPT
 from app.chat.utils.formaters import (
-    parse_composio_event_search_results,
     parse_composio_news_search_results,
-    parse_composio_finance_search_results,
     parse_composio_search_results,
     parse_vector_search_results,
 )
@@ -100,16 +98,10 @@ class ChatService:
         Returns:
             dict: The parsed result
         """
-        if "finance" in tool_name.lower():
-            parsed_result = parse_composio_finance_search_results(result)
-            print("Used finance search parser")
-        elif "news" in tool_name.lower():
+        if "news" in tool_name.lower():
             parsed_result = parse_composio_news_search_results(result)
             print("Used news search parser")
-        elif "event" in tool_name.lower():
-            parsed_result = parse_composio_event_search_results(result)
-            print("Used event search parser")
-        elif "vector" in tool_name.lower():
+        elif "movies" in tool_name.lower():
             parsed_result = parse_vector_search_results(result)
             print("Used vector search parser")
         else:
@@ -133,7 +125,7 @@ class ChatService:
             f"Tool Name Type {type(tool_name)}, Tool Args Type {type(tool_args)}"
         )
         try:
-            if tool_name == "vector_movie_search":
+            if tool_name == "recommend_movies":
                 return recommend(tool_args["query"], tool_args["top_k"])
             result = self.composio.tools.execute(
                 slug=tool_name,
