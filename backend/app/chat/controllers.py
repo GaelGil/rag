@@ -6,7 +6,6 @@ import json
 
 chat = Blueprint("chat", __name__)
 chat_service = ChatService()
-chat_service.init_chat_services()
 
 
 def generate_response(message):

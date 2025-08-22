@@ -68,12 +68,11 @@ def recommend(query: str, top_k: int = 3):
 
     result = db.session.execute(sql, {"query_vector": query_vector, "top_k": top_k})
     logger.info(f"[DEBUG] RESULT: {result}")
-    return [{"id": r.id, "movie": r.title} for r in result]
+    return [{"movie": r.title} for r in result]
 
 
 class ChatService:
-    def __init__(self, calendar_service):
-        self.calendar_service = calendar_service
+    def __init__(self):
         self.chat_history: list[dict] = []
         self.model_name: str = "gpt-4.1-mini"
         self.tools = composio_tools
@@ -172,6 +171,7 @@ class ChatService:
             None
 
         """
+        logger.info(f"[DEBUG] chat_history: {self.chat_history}")
         # add user message to chat history
         self.add_chat_history(role="user", message=message)
         # log the message
@@ -316,6 +316,7 @@ class ChatService:
                     "content": f"TOOL_NAME: {tool_name}, RESULT: {parsed_result}",
                 }
             )
+        logger.info(f"[DEBUG] chat_history: {self.chat_history}")
 
         # Get the final answer
         # IF we called tools to get updated information then we must form a final response

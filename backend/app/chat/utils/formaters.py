@@ -88,7 +88,7 @@ def parse_composio_event_search_results(composio_result: dict) -> dict:
         search_data = composio_result.get("data", {}).get("results", {})
 
         # Parse News Results as Organic Results
-        events_data = search_data.get("event_results", [])
+        events_data = search_data.get("events_results", [])
         events = []
         for event_item in events_data:
             event = EventSearchResults(
