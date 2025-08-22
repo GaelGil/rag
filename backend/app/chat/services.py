@@ -1,4 +1,3 @@
-from app.chat.utils.OpenAIClient import OpenAIClient
 from app.chat.utils.composio_tools import composio_tools
 from app.chat.utils.prompts import CHATBOT_PROMPT
 from app.chat.utils.formaters import (
@@ -26,7 +25,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 # load env
 load_dotenv(Path("../../.env"))
-client = OpenAIClient(api_key=os.getenv("OPENAI_API_KEY")).get_client()
 
 
 def get_embedding(text: str) -> list[float]:
@@ -39,6 +37,7 @@ def get_embedding(text: str) -> list[float]:
         list[float]: The embedding of the text
 
     """
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     response = client.embeddings.create(model="text-embedding-3-small", input=text)
     return response.data[0].embedding
 
@@ -57,7 +56,6 @@ def recommend(query: str, top_k: int = 3):
     # Generate embedding for user's preference or query
     logger.info(f"[DEBUG] GETTING EMBEDDING FOR QUERY: {query}")
     query_vector = get_embedding(query)
-
     logger.info("[DEBUG] SEARCHING MOVIES")
     sql = text("""
         SELECT id, title
@@ -79,7 +77,6 @@ class ChatService:
         self.composio = Composio()
         self.user_id = "0000-1111-2222"
         self.llm: OpenAI = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        self.tool_history = {}
         if not self.chat_history:
             self.add_chat_history(role="developer", message=CHATBOT_PROMPT)
 
@@ -138,16 +135,13 @@ class ChatService:
         try:
             if tool_name == "vector_movie_search":
                 return recommend(tool_args["query"], tool_args["top_k"])
-            print(f"User ID: {self.user_id}")
-            composio = Composio()
-            result = composio.tools.execute(
+            result = self.composio.tools.execute(
                 slug=tool_name,
                 user_id=self.user_id,
                 arguments=tool_args,
             )
             logger.info(f"Raw Composio result: {result}")
             logger.info(f"Composio result type: {type(result)}")
-            self.tool_history[tool_name] = {"args": tool_args, "result": result}
             return result
         except Exception as e:
             error_msg = f"Tool execution failed: {str(e)}"
@@ -155,10 +149,7 @@ class ChatService:
             logger.info(f"Error type: {type(e).__name__}")
             logger.info(f"Error message: {str(e)}")
             logger.info(f"Traceback: {traceback.format_exc()}")
-            self.tool_history[tool_name] = {
-                "args": tool_args,
-                "result": "error",
-            }
+
             return {"error": error_msg}
 
     def process_message(self, message):
